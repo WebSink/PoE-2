@@ -6,7 +6,7 @@
 
 - Пакет: `poe2cc/gear/`
 - CLI: `scripts/gear_analyze.py`
-- Тесты: `tests/test_gear_*.py` (115 тестов, из них 7 — интеграционные с настоящим PoB2)
+- Тесты: `tests/test_gear_*.py` (116 тестов, из них 7 — интеграционные с настоящим PoB2)
 
 ## Что модуль делает и чего не делает
 
@@ -199,7 +199,7 @@ uv run python scripts/gear_analyze.py --slot Boots --item-json cand.json \
 ## Тесты
 
 ```bash
-uv run pytest tests/ -q                       # 115 тестов
+uv run pytest tests/ -q                       # 116 тестов
 uv run pytest tests/ -q -m integration        # 7 тестов с настоящим PoB2
 uv run pytest tests/test_gear_analyzer.py -q  # обязательные сценарии S5.1
 ```
