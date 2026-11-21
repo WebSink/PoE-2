@@ -1,0 +1,57 @@
+{
+ "name": "Ураганная спешка",
+ "slot": "Boots",
+ "base": null,
+ "rarity": null,
+ "item_class": null,
+ "required_level": 45,
+ "item_level": null,
+ "quality": null,
+ "defences": {
+  "armour": 115,
+  "energy_shield": 34
+ },
+ "attribute_requirements": {
+  "strength": null,
+  "dexterity": null,
+  "intelligence": null
+ },
+ "mods": [
+  {
+   "text": "20% increased Movement Speed",
+   "kind": "explicit"
+  },
+  {
+   "text": "+14% to Fire Resistance",
+   "kind": "explicit"
+  },
+  {
+   "text": "+21% to Lightning Resistance",
+   "kind": "explicit"
+  }
+ ],
+ "declared_totals": {
+  "life": 83
+ },
+ "provenance": {
+  "kind": "owner_provided_listing_description",
+  "received_from": "владелец проекта в чате",
+  "received_at": "2026-11-21",
+  "fields_from_listing": [
+   "уровень требования 45",
+   "20% increased Movement Speed",
+   "+83 to maximum Life суммарно, включая связанные бонусы",
+   "+14% to Fire Resistance",
+   "+21% to Lightning Resistance",
+   "Armour 115",
+   "Energy Shield 34"
+  ],
+  "not_provided": [
+   "полный текст предмета из игры",
+   "базовый тип (от него зависят требования силы/ловкости/интеллекта)",
+   "редкость и уровень предмета",
+   "остальные модификаторы, если они есть"
+  ],
+  "note": "Данные взяты из объявления, которое владелец прислал в чат. Полного текста предмета нет, поэтому база неизвестна: движок PoB2 не сможет воспроизвести предмет, и отчёт считается только по подтверждённым свойствам. Наличие объявления и статус продавца не проверялись и не утверждаются."
+ }
+}

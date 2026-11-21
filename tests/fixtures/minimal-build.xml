@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Минимальный PoB2-подобный экспорт для тестов анализатора.
+  Настоящий экспорт Sinkov в Git не попадает (data/builds/ в .gitignore):
+  тесты не должны зависеть от игровых данных владельца.
+-->
+<PathOfBuilding2 version="0.23.1">
+  <Build level="46" className="Ranger" ascendClassName="Witchhunter"/>
+  <Items activeItemSet="1">
+    <Item id="13">
+Rarity: RARE
+Victory League
+Silk Slippers
+Item Level: 60
+Quality: 0
+LevelReq: 36
+Energy Shield: 79
++43 to maximum Energy Shield
++21 to maximum Life
++20 to maximum Mana
++13% to Fire Resistance
++19% to Cold Resistance
++60 to Stun Threshold
+    </Item>
+    <Item id="14">
+Rarity: RARE
+Iron Guard
+Plated Vest
+Item Level: 60
+Quality: 0
+LevelReq: 40
+Requires: Level 40, 35 Str
+Armour: 300
++70 to maximum Life
++25% to Fire Resistance
+    </Item>
+    <ItemSet id="1">
+      <Slot name="Boots" itemId="13"/>
+      <Slot name="Body Armour" itemId="14"/>
+    </ItemSet>
+  </Items>
+</PathOfBuilding2>
