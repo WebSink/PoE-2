@@ -1,343 +1,997 @@
 {
-  "schema_version": "1.0.0",
-  "profile_id": "sinkov-witchhunter-45",
-  "source": {
-    "type": "user_provided_screenshots_in_chat",
-    "compiled_date": "2026-11-21",
-    "notes": [
-      "Снимки из чата; исходные изображения пока не загружены в GitHub.",
-      "Значения отражают состояние на снимках, могут быть неактуальны после замены снаряжения.",
-      "Уровень выбранных пассивных узлов и конкретные камни поддержки из изображений не определены."
+ "schema_version": "2.0.0",
+ "profile_id": "sinkov-witchhunter-46",
+ "character": {
+  "name": "Sinkov",
+  "level": 46,
+  "base_class": "Mercenary",
+  "ascendancy": "Witchhunter",
+  "league": "Standard",
+  "progress": "Акт III (по последнему наблюдению в игре)",
+  "source_id": "pob2-import-2026-11-21"
+ },
+ "sources": [
+  {
+   "id": "screenshots-2026-11-21",
+   "kind": "in_game_screenshot",
+   "date": "2026-11-21",
+   "description": "Скриншоты клиента, предоставленные владельцем в чате: уровень 45, до смены нагрудника."
+  },
+  {
+   "id": "pob2-import-2026-11-21",
+   "kind": "pob2_import",
+   "date": "2026-11-21",
+   "description": "Импорт персонажа Sinkov через официальный OAuth в Path of Building - PoE2, сохранён владельцем через Save As.",
+   "engine_version": "0.23.1",
+   "tree_data_version": "0_5",
+   "artifact": "data/builds/sinkov-standard.xml",
+   "artifact_sha256": "1524af5e4136e581f6648a176ac9da4a64ddf8378cd9b7f1f5f31da10a896b3b"
+  },
+  {
+   "id": "pob2-engine-2026-11-21",
+   "kind": "pob2_engine",
+   "date": "2026-11-21",
+   "description": "Расчёты движка PoB2 v0.23.1 через pob-mcp (stdio MCP). Полный дамп: data/builds/sinkov-standard.stats.json.",
+   "engine_version": "0.23.1",
+   "tree_data_version": "0_5",
+   "artifact": "data/builds/sinkov-standard.stats.json"
+  },
+  {
+   "id": "pob2-data-0-23-1",
+   "kind": "pob2_data",
+   "date": "2026-11-21",
+   "description": "Статические данные PoB2 v0.23.1: Data/Misc.lua (monsterArmourTable, monsterEvasionTable), Modules/ConfigOptions.lua (списки конфигурации), Data/ModCache.lua (разбор модификаторов).",
+   "engine_version": "0.23.1",
+   "tree_data_version": "0_5"
+  }
+ ],
+ "observed": {
+  "source_id": "screenshots-2026-11-21",
+  "level": 45,
+  "superseded_by": "pob2-import-2026-11-21",
+  "stats": {
+   "strength": 67,
+   "dexterity": 97,
+   "intelligence": 60,
+   "life": 859,
+   "energy_shield": 319,
+   "mana": 436,
+   "spirit": 30,
+   "armour": 59,
+   "evasion": 198,
+   "block_chance_percent": 0,
+   "fire_resistance_percent": 38,
+   "cold_resistance_percent": 52,
+   "lightning_resistance_percent": 26,
+   "chaos_resistance_percent": 0,
+   "movement_speed_modifier_percent": -3,
+   "estimated_physical_damage_reduction_percent": 5,
+   "estimated_evade_chance_percent": 9
+  },
+  "notes": [
+   "Единственные наблюдения в игре — скриншоты, снятые до смены нагрудника и до 46 уровня.",
+   "Показатели относятся к уровню 45 и к прежнему нагруднику; для актуального состояния использовать imported/calculated.",
+   "Полная копия исходного JSON сохранена в data/characters/history/sinkov-2026-11-21-screenshots-v1.json."
+  ]
+ },
+ "imported": {
+  "source_id": "pob2-import-2026-11-21",
+  "attributes": {
+   "strength": 67,
+   "dexterity": 97,
+   "intelligence": 46
+  },
+  "equipment": [
+   {
+    "slot": "Weapon 1",
+    "name": "Skull Core",
+    "base": "Bombard Crossbow",
+    "rarity": "RARE",
+    "item_level": 44,
+    "quality": 6,
+    "required_level": 33,
+    "mods": [
+     "32% increased Physical Damage",
+     "Bonded: 40% increased effect of Fully Broken Armour",
+     "Grenade Skills Fire an additional Projectile",
+     "133% increased Physical Damage",
+     "+77 to Accuracy Rating",
+     "+1.2% to Critical Hit Chance",
+     "20% reduced Attribute Requirements"
+    ],
+    "runes": [
+     "Iron Rune",
+     "Iron Rune"
     ]
-  },
-  "game": "Path of Exile 2",
-  "character": {
-    "name": "Sinkov",
-    "level": 45,
-    "base_class": "Наёмник",
-    "ascendancy": "Охотник на ведьм (Witchhunter)",
-    "league": "Standard",
-    "progress": {
-      "act": 3,
-      "last_seen_location": "Лагерь на зиккурате"
+   },
+   {
+    "slot": "Helmet",
+    "name": "Atsak's Sight",
+    "base": "Veiled Mask",
+    "rarity": "UNIQUE",
+    "item_level": 70,
+    "quality": 0,
+    "required_level": 28,
+    "defences": {
+     "Evasion": 158.0,
+     "Energy Shield": 57.0
     },
-    "play_style_observed": "Арбалет; гранаты, электрические снаряды, огненные атаки"
-  },
-  "stats_snapshot": {
-    "attributes": {
-      "strength": 67,
-      "dexterity": 97,
-      "intelligence": 60
+    "mods": [
+     "Bonded: +20 to maximum Life",
+     "Bonded: +20 to maximum Mana",
+     "+14% to Fire Resistance",
+     "111% increased Evasion and Energy Shield",
+     "37% increased Critical Hit Chance",
+     "+20 to Dexterity",
+     "+13 to Intelligence",
+     "Critical Hits Poison the enemy"
+    ],
+    "runes": [
+     "Desert Rune"
+    ]
+   },
+   {
+    "slot": "Body Armour",
+    "name": "Bramble Shelter",
+    "base": "Sacrificial Mantle",
+    "rarity": "RARE",
+    "item_level": 37,
+    "quality": 0,
+    "required_level": 36,
+    "defences": {
+     "Armour": 201.0,
+     "Energy Shield": 63.0
     },
-    "resources": {
-      "life": 859,
-      "energy_shield": 319,
-      "mana": 436,
-      "spirit": 30,
-      "life_regen_per_second": 9.9,
-      "energy_shield_recharge_per_second": 39.9,
-      "mana_regen_per_second": 21.8,
-      "energy_shield_recharge_delay_seconds": 5.71
+    "mods": [
+     "+16 to Armour",
+     "+7 to maximum Energy Shield",
+     "14% increased Armour and Energy Shield",
+     "+49 to maximum Life",
+     "+8% to Fire Resistance",
+     "+22% to Lightning Resistance",
+     "2.4 Life Regeneration per second"
+    ]
+   },
+   {
+    "slot": "Gloves",
+    "name": "Honour Mitts",
+    "base": "Goldcast Cuffs",
+    "rarity": "RARE",
+    "item_level": 35,
+    "quality": 0,
+    "required_level": 33,
+    "defences": {
+     "Armour": 49.0,
+     "Energy Shield": 15.0
     },
-    "defence": {
-      "armour": 59,
-      "estimated_physical_damage_reduction_percent": 5,
-      "evasion": 198,
-      "estimated_evade_chance_percent": 9,
-      "block_chance_percent": 0
+    "mods": [
+     "Adds 1 to 4 Physical Damage to Attacks",
+     "Adds 1 to 5 Lightning damage to Attacks",
+     "+54 to Accuracy Rating",
+     "23% increased Critical Damage Bonus",
+     "+6% to Cold Resistance",
+     "Gain 22 Life per enemy killed"
+    ]
+   },
+   {
+    "slot": "Boots",
+    "name": "Victory League",
+    "base": "Silk Slippers",
+    "rarity": "RARE",
+    "item_level": 35,
+    "quality": 0,
+    "required_level": 36,
+    "defences": {
+     "Energy Shield": 79.0
     },
-    "resistance_percent": {
-      "fire": 38,
-      "cold": 52,
-      "lightning": 26,
-      "chaos": 0
-    },
-    "other": {
-      "movement_speed_modifier_percent": -3,
-      "maximum_rage": 30,
-      "enemy_critical_damage_bonus_modifier_percent": -20
-    },
-    "verification": "До примерки нагрудника «Колючий кров»; не использовать как гарантированно текущие показатели"
-  },
+    "mods": [
+     "+43 to maximum Energy Shield",
+     "+21 to maximum Life",
+     "+20 to maximum Mana",
+     "+13% to Fire Resistance",
+     "+19% to Cold Resistance",
+     "+60 to Stun Threshold"
+    ]
+   },
+   {
+    "slot": "Amulet",
+    "name": "Storm Choker",
+    "base": "Stellar Amulet",
+    "rarity": "RARE",
+    "item_level": 27,
+    "quality": null,
+    "required_level": 26,
+    "mods": [
+     "+5 to all Attributes",
+     "11% increased maximum Energy Shield",
+     "+14 to maximum Life",
+     "+55 to maximum Mana",
+     "14% increased Rarity of Items found",
+     "+1 to Level of all Melee Skills"
+    ]
+   },
+   {
+    "slot": "Ring 1",
+    "name": "Storm Turn",
+    "base": "Ruby Ring",
+    "rarity": "RARE",
+    "item_level": 41,
+    "quality": null,
+    "required_level": 30,
+    "mods": [
+     "+21% to Fire Resistance",
+     "Adds 3 to 8 Physical Damage to Attacks",
+     "+31 to Evasion Rating",
+     "+27 to maximum Life",
+     "+12% to Fire Resistance",
+     "+18% to Cold Resistance",
+     "Leech 6% of Physical Attack Damage as Mana"
+    ]
+   },
+   {
+    "slot": "Ring 2",
+    "name": "Phoenix Knot",
+    "base": "Prismatic Ring",
+    "rarity": "RARE",
+    "item_level": 41,
+    "quality": null,
+    "required_level": 35,
+    "mods": [
+     "+10% to all Elemental Resistances",
+     "Adds 2 to 6 Physical Damage to Attacks",
+     "+56 to maximum Life",
+     "+31 to maximum Mana",
+     "+11 to all Attributes",
+     "+3% to all Elemental Resistances",
+     "+18% to Fire Resistance"
+    ]
+   },
+   {
+    "slot": "Belt",
+    "name": "Rift Girdle",
+    "base": "Rawhide Belt",
+    "rarity": "RARE",
+    "item_level": 34,
+    "quality": null,
+    "required_level": 26,
+    "mods": [
+     "27% increased Life Recovery from Flasks",
+     "+58 to maximum Life",
+     "15% increased Charm Effect Duration",
+     "+10% to Lightning Resistance",
+     "14% reduced Charm Charges used",
+     "13% increased Flask Charges gained",
+     "1 to 3 Physical Thorns damage"
+    ],
+    "charm_slots": 0
+   }
+  ],
   "skill_gems": [
-    {
-      "name_ru": "Выстрел из самострела",
-      "level": 11,
-      "displayed_dps": 1446
-    },
-    {
-      "name_ru": "Осколочные снаряды",
-      "level": 10,
-      "displayed_damage": 123
-    },
-    {
-      "name_ru": "Взрывная граната",
-      "level": 10,
-      "displayed_damage": 510
-    },
-    {
-      "name_ru": "Штормовой болт",
-      "level": 10,
-      "displayed_dps": 277
-    },
-    {
-      "name_ru": "Газовая граната",
-      "level": 10,
-      "displayed_damage": 398
-    },
-    {
-      "name_ru": "Поджигающий выстрел",
-      "level": 10,
-      "displayed_damage": 88
-    },
-    {
-      "name_ru": "Вестник грома",
-      "level": 10,
-      "displayed_damage": 183
-    },
-    {
-      "name_ru": "Электрическая граната",
-      "level": 10,
-      "displayed_damage": 683
-    },
-    {
-      "name_ru": "Электризующие осколки",
-      "level": 11,
-      "displayed_dps": 305
-    },
-    {
-      "name_ru": "Вестник пепла",
-      "level": 4,
-      "displayed_damage": null
-    }
-  ],
-  "support_capacity_displayed": {
-    "strength": {
-      "used": 3,
-      "total": 13
-    },
-    "dexterity": {
-      "used": 7,
-      "total": 19
-    },
-    "intelligence": {
-      "used": 2,
-      "total": 12
-    },
-    "note": "Интерфейс «Вместимость камней поддержки»; имена поддержек по иконкам не подтверждены."
-  },
-  "equipment_snapshot": [
-    {
-      "slot": "weapon_two_handed",
-      "name": "Черепное чистилище",
-      "base": "Самострел бомбардира",
-      "equipped": true,
-      "required_level": 33,
-      "required_attributes": {
-        "strength": 27,
-        "dexterity": 27
-      },
-      "physical_damage_min": 39,
-      "physical_damage_max": 157,
-      "quality_percent": 6,
-      "critical_hit_chance_percent": 6.2,
-      "attacks_per_second": 1.65,
-      "reload_time_seconds": 0.75,
-      "mods": [
-        "32% увеличение физического урона",
-        "+1 дополнительный снаряд умений гранат",
-        "133% увеличение физического урона",
-        "+77 к меткости",
-        "+1.2% к шансу критического удара",
-        "20% снижение требований к характеристикам"
-      ],
-      "note": "Один двуручный арбалет, не два отдельных оружия."
-    },
-    {
-      "slot": "helmet",
-      "name": "Взор Ацака",
-      "base": "Маска с вуалью",
-      "equipped": true,
-      "required_level": 28,
-      "evasion": 158,
-      "energy_shield": 57,
-      "mods": [
-        "+14% к сопротивлению огню",
-        "111% увеличение уклонения и энергетического щита",
-        "37% повышение шанса критического удара",
-        "+20 к ловкости",
-        "+13 к интеллекту",
-        "Наносимые критические удары отравляют врага"
-      ]
-    },
-    {
-      "slot": "gloves",
-      "name": "Почётные подкладки",
-      "base": "Золотые манжеты",
-      "equipped": true,
-      "required_level": 33,
-      "armour": 49,
-      "energy_shield": 15,
-      "mods": [
-        "Добавляет 1–4 физического урона к атакам",
-        "Добавляет 1–5 урона молнией к атакам",
-        "+54 к меткости",
-        "23% увеличение бонуса к критическому урону",
-        "+6% к сопротивлению холоду",
-        "Даёт 22 здоровья за каждого убитого врага"
-      ]
-    },
-    {
-      "slot": "body_armour",
-      "name": "Мольбы о дожде",
-      "base": "Кетское одеяние",
-      "equipped": "confirmed_on_inventory_screenshot_before_comparison",
-      "required_level": 28,
-      "quality_percent": 13,
-      "energy_shield": 136,
-      "mods": [
-        "63% увеличение энергетического щита",
-        "+14 к интеллекту",
-        "+13% к сопротивлению молнии",
-        "30% замедление начала перезарядки энергетического щита",
-        "Перезарядка энергетического щита не прерывается получением урона, если была начата недавно"
-      ]
-    },
-    {
-      "slot": "boots",
-      "name": "Победные странники",
-      "base": "Шёлковые тапочки",
-      "equipped": true,
-      "required_level": 36,
-      "energy_shield": 79,
-      "mods": [
-        "+43 к максимуму энергетического щита (как показано на снимке)",
-        "+21 к максимуму здоровья",
-        "+20 к максимуму маны",
-        "+13% к сопротивлению огню",
-        "+19% к сопротивлению холоду",
-        "+60 к порогу оглушения"
-      ],
-      "note": "Модификатора скорости передвижения на снимке нет."
-    },
-    {
-      "slot": "belt",
-      "name": "Расколотый хомут",
-      "base": "Ремень из сыромятной кожи",
-      "equipped": true,
-      "required_level": 26,
-      "charm_slots": 1,
-      "mods": [
-        "27% увеличение восстановления здоровья от флаконов",
-        "+58 к максимуму здоровья",
-        "15% увеличение длительности эффекта оберега",
-        "+10% к сопротивлению молнии",
-        "14% уменьшение количества используемых зарядов оберегов",
-        "13% увеличение количества получаемых зарядов флакона",
-        "От 1 до 3 физического урона шипами"
-      ]
-    },
-    {
-      "slot": "ring_1",
-      "name": "Бушующий завиток",
-      "base": "Кольцо с сапфиром",
-      "equipped": true,
-      "mods": [
-        "+24% к сопротивлению холоду",
-        "Добавляет 2–5 физического урона к атакам",
-        "Добавляет 1–4 урона от огня к атакам"
-      ]
-    },
-    {
-      "slot": "ring_2",
-      "name": "Фениксовые узы",
-      "base": "Радужное кольцо",
-      "equipped": true,
-      "required_level": 35,
-      "mods": [
-        "+10% к сопротивлению всем стихиям",
-        "Добавляет 2–6 физического урона к атакам",
-        "+56 к максимуму здоровья",
-        "+31 к максимуму маны",
-        "+11 ко всем характеристикам",
-        "+3% к сопротивлению всем стихиям",
-        "+18% к сопротивлению огню"
-      ]
-    },
-    {
-      "slot": "amulet",
-      "name": "Бушующий душитель",
-      "base": "Звёздный амулет",
-      "equipped": true,
-      "required_level": 26,
-      "mods": [
-        "+5 ко всем характеристикам",
-        "11% увеличение максимума энергетического щита",
-        "+14 к максимуму здоровья",
-        "+55 к максимуму маны",
-        "14% повышение редкости найденных предметов",
-        "+1 к уровню всех камней умений ближнего боя"
-      ]
-    }
-  ],
-  "comparison_items_not_confirmed_equipped": [
-    {
-      "slot": "body_armour",
-      "name": "Колючий кров",
-      "base": "Жертвенная мантия",
-      "required_level": 36,
-      "armour": 201,
-      "energy_shield": 63,
-      "mods": [
-        "+16 к броне",
-        "+7 к максимуму энергетического щита",
-        "14% повышение брони и энергетического щита",
-        "+49 к максимуму здоровья",
-        "+8% к сопротивлению огню",
-        "+22% к сопротивлению молнии",
-        "Регенерация 2.4 здоровья в секунду"
-      ],
-      "note": "Сравнивался со старым нагрудником; нет снимка характеристик после надевания."
-    }
+   {
+    "group": 1,
+    "is_main_skill": true,
+    "active_skill": "Fragmentation Rounds",
+    "level": 10,
+    "quality": 0,
+    "supports": [
+     {
+      "name": "Double Barrel",
+      "tier": 1
+     },
+     {
+      "name": "Chain",
+      "tier": 1
+     }
+    ]
+   },
+   {
+    "group": 2,
+    "is_main_skill": false,
+    "active_skill": "Galvanic Shards",
+    "level": 11,
+    "quality": 15,
+    "supports": [
+     {
+      "name": "Rapid Attacks",
+      "tier": 1
+     },
+     {
+      "name": "Lightning Attunement",
+      "tier": 1
+     }
+    ]
+   },
+   {
+    "group": 3,
+    "is_main_skill": false,
+    "active_skill": "Herald of Thunder",
+    "level": 10,
+    "quality": 0,
+    "supports": [
+     {
+      "name": "Concentrated Area",
+      "tier": 1
+     }
+    ]
+   },
+   {
+    "group": 4,
+    "is_main_skill": false,
+    "active_skill": "Incendiary Shot",
+    "level": 10,
+    "quality": 0,
+    "supports": []
+   },
+   {
+    "group": 5,
+    "is_main_skill": false,
+    "active_skill": "Gas Grenade",
+    "level": 10,
+    "quality": 0,
+    "supports": [
+     {
+      "name": "Magnified Area",
+      "tier": 1
+     },
+     {
+      "name": "Bursting Plague",
+      "tier": 1
+     }
+    ]
+   },
+   {
+    "group": 6,
+    "is_main_skill": false,
+    "active_skill": "Voltaic Grenade",
+    "level": 10,
+    "quality": 0,
+    "supports": [
+     {
+      "name": "Fire Attunement",
+      "tier": 1
+     },
+     {
+      "name": "Pin",
+      "tier": 1
+     }
+    ]
+   },
+   {
+    "group": 7,
+    "is_main_skill": false,
+    "active_skill": "Herald of Ash",
+    "level": 4,
+    "quality": 0,
+    "supports": [
+     {
+      "name": "Precision",
+      "tier": 1
+     }
+    ]
+   },
+   {
+    "group": 8,
+    "is_main_skill": false,
+    "active_skill": "Stormblast Bolts",
+    "level": 10,
+    "quality": 0,
+    "supports": []
+   },
+   {
+    "group": 9,
+    "is_main_skill": false,
+    "active_skill": "Explosive Grenade",
+    "level": 10,
+    "quality": 0,
+    "supports": [
+     {
+      "name": "Poison",
+      "tier": 1
+     },
+     {
+      "name": "Brutality",
+      "tier": 1
+     }
+    ]
+   }
   ],
   "passive_tree": {
-    "screenshots_reviewed": 2,
-    "export_available": false,
-    "allocated_notables": null,
-    "allocated_ascendancy_nodes": null,
-    "notes": [
-      "На изображениях видны пути и выбранные узлы, но названия узлов не читаются.",
-      "Без экспорта дерева не делать точечный план возврата очков."
-    ]
-  },
-  "shopping_plan": {
-    "league": "Standard",
-    "category_priority": [
-      "ботинки",
-      "кольцо",
-      "нагрудник",
-      "перчатки",
-      "амулет"
-    ],
-    "boots_search": {
-      "max_required_level": 45,
-      "min_movement_speed_percent": 20,
-      "desired_flat_life_min": 35,
-      "desired_resistances": [
-        "lightning",
-        "fire"
-      ],
-      "notes": [
-        "Сравнивать с потерей +13% огня, +19% холода и существующего энергетического щита от текущих ботинок.",
-        "Учитывать требования атрибутов, реальную цену и статус продавца.",
-        "Никаких автоматических покупок, сообщений или обращения к недокументированным API."
-      ]
+   "allocated_node_count": 60,
+   "ascendancy_nodes": [
+    "Area of Effect",
+    "Zealous Inquisition",
+    "Damage vs Low Life Enemies",
+    "Pitiless Killer"
+   ],
+   "notables": [
+    "Volatile Catalyst",
+    "Curved Weapon",
+    "Volatile Grenades",
+    "Overwhelm",
+    "Cluster Bombs",
+    "Ricochet",
+    "Remorseless",
+    "Colossal Weapon",
+    "Hard to Kill",
+    "Battle-hardened",
+    "Grenadier"
+   ],
+   "jewel_sockets": 1,
+   "normal_node_summary": [
+    {
+     "name": "Projectile Damage",
+     "count": 9
+    },
+    {
+     "name": "Dexterity",
+     "count": 6
+    },
+    {
+     "name": "Two Handed Damage",
+     "count": 5
+    },
+    {
+     "name": "Strength",
+     "count": 4
+    },
+    {
+     "name": "Grenade Cooldown Recovery Rate",
+     "count": 3
+    },
+    {
+     "name": "Crossbow Damage",
+     "count": 3
+    },
+    {
+     "name": "Grenade Damage",
+     "count": 3
+    },
+    {
+     "name": "Grenade Area",
+     "count": 2
+    },
+    {
+     "name": "Life Regeneration",
+     "count": 2
+    },
+    {
+     "name": "Cooldown Recovery Rate",
+     "count": 2
+    },
+    {
+     "name": "Intelligence",
+     "count": 2
+    },
+    {
+     "name": "Attack Damage",
+     "count": 1
     }
+   ]
   },
-  "open_questions": [
-    "Подтвердить, надет ли нагрудник «Колючий кров», и снять обновлённые характеристики.",
-    "Получить экспорт дерева пассивок с названиями узлов.",
-    "Прочитать всплывающие подсказки камней поддержки.",
-    "Уточнить текущий запас торговой валюты и доступность объявлений."
+  "spirit_reservations": {
+   "maximum": 30,
+   "free": -40,
+   "total_reserved": 70,
+   "entries": [
+    {
+     "ability": "Herald of Thunder",
+     "group": 3,
+     "spirit": 30,
+     "conditional_on": null
+    },
+    {
+     "ability": "Herald of Ash",
+     "group": 7,
+     "spirit": 30,
+     "conditional_on": null
+    },
+    {
+     "ability": "Precision I",
+     "group": 7,
+     "spirit": 10,
+     "conditional_on": "Herald of Ash"
+    }
+   ],
+   "simultaneous_combinations": [
+    {
+     "combination": [
+      "Herald of Thunder",
+      "Herald of Ash",
+      "Precision I"
+     ],
+     "spirit_used": 70,
+     "fits": false
+    },
+    {
+     "combination": [
+      "Herald of Thunder",
+      "Herald of Ash"
+     ],
+     "spirit_used": 60,
+     "fits": false
+    },
+    {
+     "combination": [
+      "Herald of Thunder",
+      "Precision I"
+     ],
+     "spirit_used": 30,
+     "fits": true
+    },
+    {
+     "combination": [
+      "Herald of Thunder"
+     ],
+     "spirit_used": 30,
+     "fits": true
+    },
+    {
+     "combination": [
+      "Herald of Ash",
+      "Precision I"
+     ],
+     "spirit_used": 40,
+     "fits": false
+    },
+    {
+     "combination": [
+      "Herald of Ash"
+     ],
+     "spirit_used": 30,
+     "fits": true
+    },
+    {
+     "combination": [
+      "Precision I"
+     ],
+     "spirit_used": 0,
+     "fits": true
+    }
+   ],
+   "notes": [
+    "Precision I — камень поддержки в группе Herald of Ash: он резервирует дух только пока активен Herald of Ash. Без него резерв Precision равен 0 (измерено).",
+    "Импорт не содержит информации о том, какие ауры включены в игре: в XML все 34 камня помечены enabled=\"true\".",
+    "Причина отрицательного свободного духа: сумма резервов 70 при максимуме 30.",
+    "SpiritReserved в выводе движка упирается в 30 (нельзя зарезервировать больше максимума), поэтому 70 - 30 = -40 видно только через SpiritUnreserved."
+   ]
+  },
+  "uncapped_resistances": {
+   "fire": 109,
+   "cold": 66,
+   "lightning": 55,
+   "chaos": 0
+  }
+ },
+ "calculated": {
+  "engine": {
+   "name": "Path of Building - PoE2",
+   "version": "0.23.1",
+   "tree_data_version": "0_5",
+   "transport": "pob-mcp (stdio MCP), load_build -> get_stats/set_config/set_main_skill"
+  },
+  "scenarios": [
+   {
+    "id": "campaign-act3-normal",
+    "label": "Кампания, акт III, обычные монстры 46 уровня",
+    "purpose": "Релевантная цель текущего этапа: сравнима с тем, что персонаж реально встречает.",
+    "source_id": "pob2-engine-2026-11-21",
+    "captured_at": "2026-11-21",
+    "config": {
+     "resistancePenalty": -20,
+     "enemyIsBoss": "None",
+     "enemyLevel": 46,
+     "enemyArmour": 624,
+     "enemyEvasion": 414,
+     "enemyFireResist": 50,
+     "enemyColdResist": 50,
+     "enemyLightningResist": 50,
+     "enemyChaosResist": 0
+    },
+    "config_rationale": {
+     "resistancePenalty": "PoB2 ConfigOptions: Act 3 = -20% (акт III, см. character.progress).",
+     "enemyIsBoss": "Обычные монстры кампании.",
+     "enemyLevel": "Уровень персонажа 46.",
+     "enemyArmour": "data/monsterArmourTable[46] = 624 из Data/Misc.lua PoB2 v0.23.1.",
+     "enemyEvasion": "data/monsterEvasionTable[46] = 414 из Data/Misc.lua PoB2 v0.23.1.",
+     "enemyFireResist": "Дефолт PoB2 (50). Не подтверждено игрой — верхняя граница по устойчивости.",
+     "enemyColdResist": "Дефолт PoB2 (50). Не подтверждено игрой.",
+     "enemyLightningResist": "Дефолт PoB2 (50). Не подтверждено игрой.",
+     "enemyChaosResist": "Дефолт PoB2 (0)."
+    },
+    "defence": {
+     "life": 947,
+     "energy_shield": 238,
+     "mana": 412,
+     "resistances": {
+      "fire": 75,
+      "cold": 46,
+      "lightning": 35,
+      "chaos": 0
+     },
+     "armour": 300,
+     "physical_damage_reduction": 44.0,
+     "evasion": 235,
+     "evade_chance": 10.0,
+     "block_chance": 0.0,
+     "spell_suppression_chance": 0.0,
+     "deflection_rating": 0.0,
+     "stun_threshold": 1007,
+     "movement_speed_mod": 0.96,
+     "total_ehp": 2228,
+     "spirit_unreserved": -40
+    },
+    "skills": [
+     {
+      "group": 1,
+      "name": "Fragmentation Rounds",
+      "gem_level": 10,
+      "total_dps": 68.39,
+      "average_hit": 82.2,
+      "dot_dps": 7.69,
+      "speed_per_second": 0.832,
+      "projectile_count": 10,
+      "detonation_time_s": null,
+      "crit_chance": 8.49
+     },
+     {
+      "group": 2,
+      "name": "Galvanic Shards",
+      "gem_level": 11,
+      "total_dps": 115.12,
+      "average_hit": 141.92,
+      "dot_dps": 3.33,
+      "speed_per_second": 0.811,
+      "projectile_count": 9,
+      "detonation_time_s": null,
+      "crit_chance": 8.49
+     },
+     {
+      "group": 4,
+      "name": "Incendiary Shot",
+      "gem_level": 10,
+      "total_dps": 53.12,
+      "average_hit": 75.83,
+      "dot_dps": 1.95,
+      "speed_per_second": 0.701,
+      "projectile_count": 10,
+      "detonation_time_s": null,
+      "crit_chance": 8.49
+     },
+     {
+      "group": 5,
+      "name": "Gas Grenade",
+      "gem_level": 10,
+      "total_dps": 189.03,
+      "average_hit": 343.69,
+      "dot_dps": 16.48,
+      "speed_per_second": 0.55,
+      "projectile_count": 3,
+      "detonation_time_s": 2.5,
+      "crit_chance": 8.49
+     },
+     {
+      "group": 6,
+      "name": "Voltaic Grenade",
+      "gem_level": 10,
+      "total_dps": 259.8,
+      "average_hit": 629.82,
+      "dot_dps": 6.2,
+      "speed_per_second": 0.412,
+      "projectile_count": 3,
+      "detonation_time_s": 3.125,
+      "crit_chance": 8.49
+     },
+     {
+      "group": 8,
+      "name": "Stormblast Bolts",
+      "gem_level": 10,
+      "total_dps": 181.01,
+      "average_hit": 144.05,
+      "dot_dps": 6.67,
+      "speed_per_second": 1.257,
+      "projectile_count": 3,
+      "detonation_time_s": null,
+      "crit_chance": 8.49
+     },
+     {
+      "group": 9,
+      "name": "Explosive Grenade",
+      "gem_level": 10,
+      "total_dps": 153.2,
+      "average_hit": 464.24,
+      "dot_dps": 0.0,
+      "speed_per_second": 0.33,
+      "projectile_count": 3,
+      "detonation_time_s": 3.75,
+      "crit_chance": 8.49
+     }
+    ],
+    "notes": [
+     "Сопротивления посчитаны при штрафе -20 (акт III), а не при -60 из импорта.",
+     "Снижение физического урона 44% и шанс уклонения 10% выше эндгейм-значений, потому что броня и уклонение сравниваются с уроном монстра 46 уровня.",
+     "Стихийные сопротивления врага оставлены дефолтными (50) — это верхняя граница, реальные монстры акта III могут иметь меньше."
+    ]
+   },
+   {
+    "id": "endgame-pinnacle-as-imported",
+    "label": "Эндгейм: Guardian/Pinnacle 82 уровня (как в импорте)",
+    "purpose": "Стандартная эндгейм-цель PoB2 для сравнения и для сопоставимости с прошлыми отчётами.",
+    "source_id": "pob2-engine-2026-11-21",
+    "captured_at": "2026-11-21",
+    "config": {
+     "resistancePenalty": -60,
+     "enemyIsBoss": "Pinnacle",
+     "enemyLevel": 82,
+     "enemyArmour": 8063,
+     "enemyEvasion": 1175,
+     "enemyFireResist": 50,
+     "enemyColdResist": 50,
+     "enemyLightningResist": 50,
+     "enemyChaosResist": 0
+    },
+    "config_rationale": {
+     "resistancePenalty": "Значение из импортированного XML (Endgame -60%) — стандартный эндгейм-сценарий PoB2.",
+     "enemyIsBoss": "Значение из импортированного XML (Guardian/Pinnacle).",
+     "enemyLevel": "Значение из импортированного XML.",
+     "enemyArmour": "Значение из импортированного XML: round(monsterArmourTable[82] * PinnacleArmourMean/100).",
+     "enemyEvasion": "Значение из импортированного XML.",
+     "enemyFireResist": "Дефолт PoB2 (50).",
+     "enemyColdResist": "Дефолт PoB2 (50).",
+     "enemyLightningResist": "Дефолт PoB2 (50).",
+     "enemyChaosResist": "Дефолт PoB2 (0)."
+    },
+    "defence": {
+     "life": 947,
+     "energy_shield": 238,
+     "mana": 412,
+     "resistances": {
+      "fire": 49,
+      "cold": 6,
+      "lightning": -5,
+      "chaos": 0
+     },
+     "armour": 300,
+     "physical_damage_reduction": 3.0,
+     "evasion": 235,
+     "evade_chance": 3.0,
+     "block_chance": 0.0,
+     "spell_suppression_chance": 0.0,
+     "deflection_rating": 0.0,
+     "stun_threshold": 1007,
+     "movement_speed_mod": 0.96,
+     "total_ehp": 1216,
+     "spirit_unreserved": -40
+    },
+    "skills": [
+     {
+      "group": 1,
+      "name": "Fragmentation Rounds",
+      "gem_level": 10,
+      "total_dps": 27.22,
+      "average_hit": 32.72,
+      "dot_dps": 8.01,
+      "speed_per_second": 0.832,
+      "projectile_count": 10,
+      "detonation_time_s": null,
+      "crit_chance": 8.49
+     },
+     {
+      "group": 2,
+      "name": "Galvanic Shards",
+      "gem_level": 11,
+      "total_dps": 60.59,
+      "average_hit": 74.69,
+      "dot_dps": 3.44,
+      "speed_per_second": 0.811,
+      "projectile_count": 9,
+      "detonation_time_s": null,
+      "crit_chance": 8.49
+     },
+     {
+      "group": 4,
+      "name": "Incendiary Shot",
+      "gem_level": 10,
+      "total_dps": 28.92,
+      "average_hit": 41.28,
+      "dot_dps": 1.01,
+      "speed_per_second": 0.701,
+      "projectile_count": 10,
+      "detonation_time_s": null,
+      "crit_chance": 8.49
+     },
+     {
+      "group": 5,
+      "name": "Gas Grenade",
+      "gem_level": 10,
+      "total_dps": 78.38,
+      "average_hit": 142.5,
+      "dot_dps": 17.07,
+      "speed_per_second": 0.55,
+      "projectile_count": 3,
+      "detonation_time_s": 2.5,
+      "crit_chance": 8.49
+     },
+     {
+      "group": 6,
+      "name": "Voltaic Grenade",
+      "gem_level": 10,
+      "total_dps": 127.86,
+      "average_hit": 309.97,
+      "dot_dps": 5.15,
+      "speed_per_second": 0.412,
+      "projectile_count": 3,
+      "detonation_time_s": 3.125,
+      "crit_chance": 8.49
+     },
+     {
+      "group": 8,
+      "name": "Stormblast Bolts",
+      "gem_level": 10,
+      "total_dps": 92.63,
+      "average_hit": 73.72,
+      "dot_dps": 6.88,
+      "speed_per_second": 1.257,
+      "projectile_count": 3,
+      "detonation_time_s": null,
+      "crit_chance": 8.49
+     },
+     {
+      "group": 9,
+      "name": "Explosive Grenade",
+      "gem_level": 10,
+      "total_dps": 72.96,
+      "average_hit": 221.1,
+      "dot_dps": 0.0,
+      "speed_per_second": 0.33,
+      "projectile_count": 3,
+      "detonation_time_s": 3.75,
+      "crit_chance": 8.49
+     }
+    ],
+    "notes": [
+     "Полностью повторяет конфигурацию импортированного XML: resistancePenalty=-60, enemyLevel=82, enemyArmour=8063, enemyIsBoss=Pinnacle.",
+     "Именно эти числа нельзя сравнивать с игрой напрямую: штраф -60 не соответствует акту III."
+    ]
+   }
+  ],
+  "mechanics_probes": [
+   {
+    "id": "spirit-reservation-attribution",
+    "question": "Сколько духа резервирует каждая способность и почему свободный дух отрицательный?",
+    "method": "load_build, затем по одному set_gem(enabled=false) для каждой способности и get_stats.SpiritUnreserved. Дополнительно проверены комбинации.",
+    "results": [
+     {
+      "case": "все включены (как в импорте)",
+      "spirit_unreserved": -40
+     },
+     {
+      "case": "без Herald of Thunder",
+      "spirit_unreserved": -10
+     },
+     {
+      "case": "без Herald of Ash (вместе с ним уходит Precision)",
+      "spirit_unreserved": 0
+     },
+     {
+      "case": "без Precision I",
+      "spirit_unreserved": -30
+     },
+     {
+      "case": "без всех трёх",
+      "spirit_unreserved": 30
+     },
+     {
+      "case": "только Herald of Thunder",
+      "spirit_unreserved": 0
+     },
+     {
+      "case": "только Herald of Ash",
+      "spirit_unreserved": 0
+     },
+     {
+      "case": "только Precision I",
+      "spirit_unreserved": 30
+     },
+     {
+      "case": "Herald of Thunder + Precision I",
+      "spirit_unreserved": 0
+     },
+     {
+      "case": "Herald of Ash + Precision I",
+      "spirit_unreserved": -10
+     }
+    ],
+    "conclusion": "Herald of Thunder = 30, Herald of Ash = 30, Precision I = 10 (только вместе с Herald of Ash). Сумма 70 при максимуме 30 даёт -40. Одновременно может работать не более одного вестника.",
+    "limitations": [
+     "Импорт не содержит состояния включённости аур в игре: в XML все камни enabled=\"true\".",
+     "Движок не меняет TotalDPS главного умения при отключении вестников, поэтому их вклад в урон здесь не измеряется."
+    ],
+    "captured_at": "2026-11-21"
+   },
+   {
+    "id": "cluster-bombs-vs-volatile-grenades",
+    "question": "Cluster Bombs (+50% время детонации, +1 снаряд) и Volatile Grenades (-25% время детонации): конфликт или обмен?",
+    "method": "load_build, dealloc_node 29514 / 17882 в разных сочетаниях, set_main_skill(5), затем get_stats.DetonationTime и ProjectileCount.",
+    "results": [
+     {
+      "case": "оба узла",
+      "detonation_time_s": 2.5,
+      "projectile_count": 3,
+      "total_dps": 78.38
+     },
+     {
+      "case": "без Cluster Bombs",
+      "detonation_time_s": 1.5,
+      "projectile_count": 2,
+      "total_dps": 78.38
+     },
+     {
+      "case": "без Volatile Grenades",
+      "detonation_time_s": 3.0,
+      "projectile_count": 3,
+      "total_dps": 78.38
+     },
+     {
+      "case": "без обоих",
+      "detonation_time_s": 2.0,
+      "projectile_count": 2,
+      "total_dps": 78.38
+     }
+    ],
+    "conclusion": "Это не ошибка, а обмен. Модификаторы складываются аддитивно в одном бакете DetonationTime (Data/ModCache.lua: оба модификатора type=INC, skillType=159): база 2.0 с, +50% даёт 3.0 с, -25% даёт 1.5 с, вместе 2.5 с (+25% к базе). Взамен Cluster Bombs добавляет ровно один снаряд (3 против 2). TotalDPS движка при этом не меняется ни в одном варианте.",
+    "limitations": [
+     "PoB2 считает TotalDPS гранат от перезарядки/скорости, а не от времени детонации, поэтому практический выигрыш от ускорения детонации в TotalDPS не виден.",
+     "Дополнительные снаряды не агрегируются в TotalDPS: движок показывает урон одного попадания и снарядов на выстрел отдельно."
+    ],
+    "captured_at": "2026-11-21"
+   }
   ]
+ },
+ "unverified": [
+  {
+   "item": "Фактический штраф сопротивлений в игре",
+   "reason": "В импорте стоит эндгейм-значение -60; прогресс персонажа — акт III, где PoB2 предлагает -20.",
+   "how_to_verify": "Открыть экран защиты персонажа в клиенте и сравнить сопротивления с 75/46/35 (штраф -20) или 49/6/-5 (штраф -60).",
+   "blocks": [
+    "defence.resistances"
+   ]
+  },
+  {
+   "item": "Какие ауры и резервации духа реально включены в игре",
+   "reason": "Импорт помечает все 34 камня enabled=\"true\" и не хранит состояние резерваций.",
+   "how_to_verify": "Посмотреть панель духа в клиенте: сколько зарезервировано и какие баффы активны.",
+   "blocks": [
+    "imported.spirit_reservations"
+   ]
+  },
+  {
+   "item": "Работает ли оберег при Charm Slots: 0",
+   "reason": "В тексте импорта у ремня Rift Girdle указано Charm Slots: 0, при этом в наборе присутствует Ruby Charm.",
+   "how_to_verify": "Проверить в клиенте, активен ли оберег и сколько слотов показывает ремень.",
+   "blocks": [
+    "imported.equipment"
+   ]
+  },
+  {
+   "item": "Стихийные сопротивления монстров акта III",
+   "reason": "В сценарии кампании оставлены дефолтные 50% — это допущение, а не измерение.",
+   "how_to_verify": "Сравнить урон в игре по монстру с известным здоровьем либо взять данные сообщества для акта III.",
+   "blocks": [
+    "calculated.scenarios[campaign-act3-normal]"
+   ]
+  },
+  {
+   "item": "Вклад вестников в урон",
+   "reason": "Отключение Herald of Thunder / Herald of Ash не меняет TotalDPS главного умения в движке.",
+   "how_to_verify": "Проверить в игре урон с включённым и выключенным вестником на одном и том же монстре.",
+   "blocks": [
+    "calculated.mechanics_probes"
+   ]
+  },
+  {
+   "item": "Соответствие данных движка 0_5 текущему патчу игры",
+   "reason": "PoB2 v0.23.1 грузит tree data 0_5; точный патч клиента не сверялся.",
+   "how_to_verify": "Сравнить версию игры в клиенте с версией данных PoB2."
+  }
+ ]
 }

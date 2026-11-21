@@ -15,7 +15,7 @@
 | Web research | `web_search` / `web_fetch` | PASS | Использованы для README/лицензий pob-mcp и PoB2 |
 | Cherry tools | `mcp__cherry-tools__*` | PASS | `config`/`install_mcp_server`/`web_fetch` |
 | Agent memory | `agent-memory` | UNVERIFIED | Сервер объявлен, в этой сессии не вызывался |
-| **pob-mcp** | stdio MCP | **PASS** | Активен и доверен; 44 инструмента; реальные вызовы |
+| **pob-mcp** | stdio MCP | **PASS** | Активен и доверен; 44 инструмента; реальные вызовы; **Sinkov загружен** (см. ниже) |
 | Path of Building 2 | release v0.23.1 | PASS | Headless-запуск, tree data `0_5` |
 | LuaJIT | 2.1 portable | PASS | `luajit -v` → `LuaJIT 2.1.1720049189` |
 | Docker | 29.9.1 | NOT USED | Демон не запущен; проекту не нужен |
@@ -46,11 +46,24 @@
    - `new_build` → ok;
    - `get_stats` → `Life 65`, `Mana 50`, `FireResist -50`, `Evasion 7` (пустой билд);
    - `list_classes` → реальный список классов/возвышений PoE2.
+4. **S4.6 — реальный билд Sinkov (2026-11-21).**
+   `load_build` на `data/builds/sinkov-standard.xml` → `Mercenary` / `Witchhunter`, уровень 46.
+   `get_stats` / `get_tree_state` (60 узлов) / `get_skills` (11 групп) / `get_items` (13 слотов) /
+   `sanity_check` (3 предупреждения) — все вызовы без ошибок.
+5. **S4.7 — сценарии и механические пробы (2026-11-21).**
+   Инструменты `pob-mcp` объявлены в сессии напрямую (не через отдельный клиент).
+   Выполнены: `set_config` (resistancePenalty −60/−20/0, enemyLevel, enemyArmour, enemyIsBoss),
+   `set_main_skill` (7 групп), `set_gem` (включение/выключение вестников), `dealloc_node` (29514, 17882).
+   Результаты: `docs/sinkov-pob-audit.md`, машинночитаемо — `data/characters/sinkov.json`.
+   Выявлено ограничение движка: `TotalDPS` не реагирует на число снарядов и время детонации гранат,
+   но `DetonationTime` и `ProjectileCount` доступны отдельными полями `get_stats`.
 
 ### Ограничения
 
-- **Sinkov не загружен в PoB2.** Нет `.xml`-экспорта; частичный JSON-профиль
-  нельзя выдать за билд. Любые DPS/EHP для Sinkov сейчас — `UNVERIFIED`.
+- **Абсолютные цифры PoB2 зависят от конфига импорта.** Файл приходит с дефолтами
+  `resistancePenalty=-60` (Endgame), `enemyLevel=82`, `enemyArmour=8063`. Для персонажа
+  в акте III корректный штраф — `-20`; перед сравнением с игрой выставлять его явно.
+- Отображаемый в игре DPS не сопоставим с `TotalDPS` движка (разные цели и допущения).
 - PoB2 v0.23.1 грузит данные `0_5`. Совпадение с точным патчем игры пользователя
   не проверялось.
 - `optimize_build` — жадный поиск, не полный решатель; цены не учитывает.
@@ -70,6 +83,6 @@
 Ничего не требуется для `pob-mcp`: сервер активен. Если Cherry Studio попросит
 подтвердить доверие после перезапуска — разрешить `pob-mcp` в Settings → MCP.
 
-Для полного анализа Sinkov нужно: экспортировать билд из Path of Building 2
-(`.xml` или build code) и положить в `data/builds/` (каталог появится при первом
-экспорте).
+Для полного анализа Sinkov больше ничего не нужно: `.xml` лежит в `data/builds/sinkov-standard.xml`
+(каталог в Git не попадает), аудит — `docs/sinkov-pob-audit.md`. Повторный экспорт нужен только
+после смены экипировки или камней в игре.

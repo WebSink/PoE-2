@@ -21,3 +21,14 @@ data/builds/<character>-<league>.stats.json   # снимок get_stats (по ж�
 ## Как получить файл
 
 См. [docs/integrations/pob2-character-import.md](../../docs/integrations/pob2-character-import.md).
+
+## Что лежит локально (2026-11-21)
+
+| Файл | Что это |
+|---|---|
+| `sinkov-standard.xml` | импорт Sinkov через официальный OAuth PoB2, 46 ур., Witchhunter, Standard (sha256 `1524af5e…`) |
+| `sinkov-standard.stats.json` | снимок движка: `get_stats` / `get_tree_state` / `get_skills` / `get_items` / `sanity_check` / `get_config` |
+
+Оба файла в Git не попадают. Разбор: [docs/sinkov-pob-audit.md](../../docs/sinkov-pob-audit.md).
+Машиночитаемый профиль персонажа (schema 2.0.0, в Git входит):
+[data/characters/sinkov.json](../characters/sinkov.json).

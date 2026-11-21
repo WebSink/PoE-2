@@ -1,0 +1,17 @@
+[project]
+name = "poe2-control-center"
+version = "0.1.0"
+description = "Локальный анализ персонажей Path of Exile 2 на движке Path of Building 2"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

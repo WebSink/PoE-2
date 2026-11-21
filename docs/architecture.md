@@ -42,12 +42,17 @@
 
 ### 1. Character Profile
 
-- Вход: `data/characters/<id>.json` (`schema_version`).
-- Задачи: валидация схемы, нормализация слотов, явное разделение
-  `equipment_snapshot` и `comparison_items_not_confirmed_equipped`.
+- Вход: `data/characters/<id>.json` (`schema_version` 2.0.0).
+- Задачи: валидация схемы, нормализация слотов, явное разделение уровней
+  достоверности: `observed` / `imported` / `calculated` / `unverified`.
 - Не делает расчётов урона.
 - Контракт: неизменяемый снимок + метка источника и даты. Новые снимки — новые
-  записи/версии, а не молчаливая перезапись.
+  записи/версии (`data/characters/history/`), а не молчаливая перезапись.
+- Расчётные величины существуют только внутри `calculated.scenarios[*]` вместе с
+  конфигурацией, её обоснованием и датой снятия.
+- Проверки: `scripts/validate_data.py` (схема + доменные правила, только stdlib) и
+  `tests/test_character_profiles.py` (те же правила + негативные кейсы).
+- Описание модели: `docs/character-profile-schema.md`.
 
 ### 2. Gear Analyzer
 
@@ -64,6 +69,10 @@
 - Вход: PoB build code / `.xml` / URL (pobb.in и т.п.).
 - Выход: stats из движка (`get_stats`), дерево (`get_tree_state`), камни
   (`get_skills`), предметы (`get_items`), sanity check.
+- Любой результат расчёта обязан нести конфигурацию: штраф сопротивлений, уровень
+  и тип цели, броня/уклонение/сопротивления врага. Без конфигурации число недействительно.
+- Импорт приходит с эндгейм-дефолтами (`-60` / уровень 82 / броня 8063) — для кампании
+  их надо переопределять.
 - Ограничение: **без PoB-экспорта Sinkov расчёт невозможен**; JSON-профиль не
   импортируется как билд.
 - Не пишет в установку PoB2; только читает данные.
@@ -93,11 +102,15 @@
 
 ```
 data/
-  characters/          # профили персонажей
+  characters/          # профили персонажей (schema 2.0.0)
+  characters/history/  # неизменяемые прошлые снимки
+  schemas/             # JSON Schema профилей
   history/             # JSONL история апгрейдов
   market/              # сохранённые вручную объявления/фильтры
+  builds/              # локальные PoB2-экспорты (в Git не входят)
 docs/
   architecture.md
+  character-profile-schema.md
   integrations/
 skills/
   poe2-build-analysis/
@@ -109,6 +122,9 @@ config/
   model-routing.example.json
 scripts/
   check-pob.ps1
+  validate_data.py     # валидатор профилей (stdlib)
+tests/
+  test_character_profiles.py
 src/                   # появится на этапе реализации
   character/
   gear/
@@ -123,7 +139,7 @@ src/                   # появится на этапе реализации
 |---|---|---|
 | S0 | Инвентаризация окружения | выполнен |
 | S1 | MCP bootstrap + проверка | выполнен (pob-mcp) |
-| S2 | Проектные скиллы | созданы, требуется импорт в Cherry |
+| S2 | Проектные скиллы | созданы, зарегистрированы и доступны в сессии Cherry |
 | S3 | PoB2 smoke test | выполнен (12/12 тестов, 44 tool) |
 | S4 | Документация + PR | выполняется |
 | S5 | Реализация модулей | не начат |

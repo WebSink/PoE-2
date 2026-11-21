@@ -13,23 +13,32 @@
 
 ## Главный персонаж
 
-- `Sinkov`, Witchhunter (Охотник на ведьм), 45 уровень, лига Standard.
-- Профиль: `data/characters/sinkov.json` (schema_version 1.0.0).
-- Аудит: `docs/sinkov-build-audit.md`.
+- `Sinkov`, Witchhunter (Охотник на ведьм), 46 уровень, лига Standard.
+- Актуальный профиль: `data/characters/sinkov.json` (**schema_version 2.0.0**) — построен из импорта PoB2.
+  Разделы `observed` / `imported` / `calculated` / `unverified`; схема — `data/schemas/character-profile.schema.json`,
+  описание — `docs/character-profile-schema.md`.
+- Исторический снимок со скриншотов (уровень 45): `data/characters/history/sinkov-2026-11-21-screenshots-v1.json`.
+- PoB2-экспорт: `data/builds/sinkov-standard.xml` (локальный, в Git не входит).
+- Аудит по движку PoB2: `docs/sinkov-pob-audit.md`; история наблюдений — `docs/sinkov-build-audit.md`.
 
 ## Железные правила данных
 
-1. **Не выдавать предположение за факт.** В JSON есть поле `verification` и
-   `comparison_items_not_confirmed_equipped`. Нагрудник «Колючий кров» **не
-   подтверждён как надетый**.
+1. **У каждого факта один уровень достоверности.** `observed` (в игре) / `imported` (импорт PoB2) /
+   `calculated` (движок) / `unverified` (требует проверки). Не смешивать разделы и не переносить
+   числа из одного в другой без источника. Нагрудник «Колючий кров» подтверждён как надетый
+   (Bramble Shelter / Sacrificial Mantle в импорте).
 2. **Не выдумывать DPS и характеристики.** Числа берутся только из PoB2-движка
    (MCP `pob-mcp`) или из подтверждённого снимка. Отображаемый DPS разных умений
-   в игре несопоставим напрямую.
-3. **Источник + версия игры.** Для каждого игрового правила указывать источник и
+   в игре несопоставим напрямую. Разовый урон и DPS — разные величины.
+3. **Нет расчёта без конфигурации.** Любой DPS/EHP живёт только внутри
+   `calculated.scenarios[*]` с `config`, `config_rationale`, `captured_at` и `source_id`.
+   Голых DPS/EHP на верхнем уровне профиля быть не должно.
+4. **Источник + версия игры.** Для каждого игрового правила указывать источник и
    версию данных PoB2 (сейчас движок грузит tree data `0_5`).
-4. **Sinkov не является PoB-билдом.** Полный расчёт возможен только после экспорта
-   `.xml` из Path of Building 2. Частичный JSON-профиль не заменяет экспорт.
-5. **Рынок — только вручную.** Никаких скраперов, недокументированных API, обхода
+5. **Импорт приходит с эндгейм-дефолтами.** В XML `resistancePenalty=-60`, `enemyLevel=82`,
+   `enemyArmour=8063`, `enemyIsBoss=Pinnacle`. Для кампании акта III корректно `-20`,
+   `enemyLevel=46`, `enemyArmour=624`. Никогда не смешивать столбцы разных штрафов.
+6. **Рынок — только вручную.** Никаких скраперов, недокументированных API, обхода
    защиты trade-сайта, автоматических сделок и сообщений продавцам.
 
 ## Безопасность
@@ -68,6 +77,12 @@
 # Проверить PoB2 + pob-mcp end-to-end
 powershell -ExecutionPolicy Bypass -File scripts/check-pob.ps1
 
+# Проверить целостность профилей персонажей (схема + доменные правила, без внешних зависимостей)
+uv run python scripts/validate_data.py
+
+# Тесты валидатора и профиля (25 тестов, включая негативные кейсы)
+uv run pytest tests/
+
 # Интеграционные тесты pob-mcp (12 тестов, реальный Lua-мост)
 cd .tools/pob-mcp
 POB_MCP_INSTALL_DIR='C:\Projects\PoE-2\.tools\pob2' \
@@ -91,6 +106,8 @@ uv run pytest tests/test_bridge_protocol.py -q
 ## Документация
 
 - `docs/architecture.md` — модули и потоки данных.
+- `docs/character-profile-schema.md` — модель профиля и автоматические проверки.
+- `docs/sinkov-pob-audit.md` — аудит Sinkov по движку PoB2 (актуальные числа).
 - `docs/integrations/mcp-status.md` — что реально подключено и проверено.
 - `docs/integrations/skills-status.md` — скиллы и их регистрация.
 - `docs/integrations/a6-model-routing.md` — FAST / ANALYZE / CODE.
