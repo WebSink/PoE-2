@@ -1,0 +1,15 @@
+{
+  "$comment": "Шаблон MCP-конфигурации. Пути заменить на локальные. Секретов здесь нет и быть не должно.",
+  "mcpServers": {
+    "pob-mcp": {
+      "type": "stdio",
+      "command": "<PROJECT_ROOT>\\.tools\\pob-mcp\\.venv\\Scripts\\pob-mcp.exe",
+      "args": [],
+      "env": {
+        "POB_MCP_INSTALL_DIR": "<PROJECT_ROOT>\\.tools\\pob2",
+        "POB_MCP_LUAJIT": "<PROJECT_ROOT>\\.tools\\luajit\\bin\\luajit.exe",
+        "POB_MCP_LOG_LEVEL": "INFO"
+      }
+    }
+  }
+}

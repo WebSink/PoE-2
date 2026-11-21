@@ -1,0 +1,367 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/WebSink/PoE-2/data/schemas/character-profile.schema.json",
+  "title": "PoE 2 character profile",
+  "description": "Профиль персонажа Path of Exile 2 с обязательным разделением провенанса. Каждое утверждение относится ровно к одному уровню достоверности: observed (подтверждено в игре), imported (получено импортом PoB2), calculated (рассчитано движком PoB2 под конкретной конфигурацией), unverified (требует проверки). Расчётные величины не существуют вне сценария: у каждого сценария есть версия движка, конфигурация, источник и дата.",
+  "type": "object",
+  "required": ["schema_version", "profile_id", "character", "sources", "observed", "imported", "calculated", "unverified"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Семантическая версия схемы профиля."
+    },
+    "profile_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Стабильный идентификатор профиля: <character>-<ascendancy>-<level>."
+    },
+    "character": {
+      "type": "object",
+      "required": ["name", "level", "base_class", "ascendancy", "league"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "level": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "base_class": { "type": "string", "minLength": 1 },
+        "ascendancy": { "type": "string", "minLength": 1 },
+        "league": { "type": "string", "minLength": 1 },
+        "progress": { "type": ["string", "null"] },
+        "source_id": { "type": "string", "description": "Ссылка на sources[].id, откуда взяты эти поля." }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Источники данных профиля. На них ссылаются поля source_id.",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "date"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "kind": {
+            "type": "string",
+            "enum": ["in_game_screenshot", "pob2_import", "pob2_engine", "pob2_data"],
+            "description": "in_game_screenshot = наблюдение в игре; pob2_import = импорт персонажа; pob2_engine = расчёт движка; pob2_data = статические данные PoB2."
+          },
+          "date": { "type": "string", "format": "date" },
+          "description": { "type": "string", "minLength": 1 },
+          "engine_version": { "type": "string" },
+          "tree_data_version": { "type": "string" },
+          "artifact": {
+            "type": "string",
+            "description": "Путь к локальному артефакту. Файлы data/builds/* в Git не входят."
+          },
+          "artifact_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "observed": {
+      "type": "object",
+      "description": "Подтверждено в игре (скриншоты, экраны клиента). Не смешивать с расчётами.",
+      "required": ["source_id", "level", "stats"],
+      "additionalProperties": false,
+      "properties": {
+        "source_id": { "type": "string" },
+        "level": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "superseded_by": { "type": ["string", "null"], "description": "id источника, который вытеснил эти наблюдения." },
+        "stats": {
+          "type": "object",
+          "description": "Плоские показатели так, как их показал клиент.",
+          "additionalProperties": { "type": ["number", "string", "null"] }
+        },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "imported": {
+      "type": "object",
+      "description": "Получено импортом PoB2 (класс, дерево, предметы, камни). Это перенос данных, а не расчёт.",
+      "required": ["source_id", "attributes", "equipment", "skill_gems", "passive_tree"],
+      "additionalProperties": false,
+      "properties": {
+        "source_id": { "type": "string" },
+        "attributes": {
+          "type": "object",
+          "required": ["strength", "dexterity", "intelligence"],
+          "additionalProperties": false,
+          "properties": {
+            "strength": { "type": "integer" },
+            "dexterity": { "type": "integer" },
+            "intelligence": { "type": "integer" }
+          }
+        },
+        "equipment": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["slot", "name", "base", "rarity"],
+            "additionalProperties": false,
+            "properties": {
+              "slot": { "type": "string" },
+              "name": { "type": "string" },
+              "base": { "type": "string" },
+              "rarity": { "type": "string", "enum": ["NORMAL", "MAGIC", "RARE", "UNIQUE"] },
+              "item_level": { "type": ["integer", "null"] },
+              "quality": { "type": ["integer", "null"] },
+              "required_level": { "type": ["integer", "null"] },
+              "defences": { "type": "object", "additionalProperties": { "type": "number" } },
+              "mods": { "type": "array", "items": { "type": "string" } },
+              "runes": { "type": "array", "items": { "type": "string" } },
+              "charm_slots": { "type": "integer", "minimum": 0, "description": "Слоты оберегов так, как их записал импорт. 0 может быть ограничением импорта, а не фактом игры." }
+            }
+          }
+        },
+        "skill_gems": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["group", "is_main_skill", "active_skill"],
+            "additionalProperties": false,
+            "properties": {
+              "group": { "type": "integer", "minimum": 1 },
+              "is_main_skill": { "type": "boolean" },
+              "active_skill": { "type": ["string", "null"] },
+              "level": { "type": ["integer", "null"] },
+              "quality": { "type": ["integer", "null"] },
+              "supports": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "tier"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": { "type": "string" },
+                    "tier": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "passive_tree": {
+          "type": "object",
+          "required": ["allocated_node_count", "ascendancy_nodes", "notables", "jewel_sockets"],
+          "additionalProperties": false,
+          "properties": {
+            "allocated_node_count": { "type": "integer", "minimum": 0 },
+            "ascendancy_nodes": { "type": "array", "items": { "type": "string" } },
+            "notables": { "type": "array", "items": { "type": "string" } },
+            "jewel_sockets": { "type": "integer", "minimum": 0 },
+            "normal_node_summary": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "count"],
+                "additionalProperties": false,
+                "properties": {
+                  "name": { "type": "string" },
+                  "count": { "type": "integer", "minimum": 1 }
+                }
+              }
+            }
+          }
+        },
+        "uncapped_resistances": {
+          "type": "object",
+          "description": "Сопротивления до применения штрафа акта. Огонь выведен из двух измеренных точек (-60 -> 49 и -20 -> 75 при капе): uncapped = 109.",
+          "required": ["fire", "cold", "lightning", "chaos"],
+          "additionalProperties": false,
+          "properties": {
+            "fire": { "type": "number" },
+            "cold": { "type": "number" },
+            "lightning": { "type": "number" },
+            "chaos": { "type": "number" }
+          }
+        },
+        "spirit_reservations": {
+          "type": "object",
+          "description": "Разбор резервирования духа: измерено движком по одному источнику за раз.",
+          "required": ["maximum", "free", "total_reserved", "entries"],
+          "additionalProperties": false,
+          "properties": {
+            "maximum": { "type": "number" },
+            "free": { "type": "number" },
+            "total_reserved": { "type": "number" },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["ability", "group", "spirit", "conditional_on"],
+                "additionalProperties": false,
+                "properties": {
+                  "ability": { "type": "string" },
+                  "group": { "type": "integer" },
+                  "spirit": { "type": "number", "minimum": 0 },
+                  "conditional_on": {
+                    "type": ["string", "null"],
+                    "description": "null, если резерв действует всегда; иначе имя активного умения, без которого резерв не применяется."
+                  }
+                }
+              }
+            },
+            "simultaneous_combinations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["combination", "spirit_used", "fits"],
+                "additionalProperties": false,
+                "properties": {
+                  "combination": { "type": "array", "items": { "type": "string" } },
+                  "spirit_used": { "type": "number" },
+                  "fits": { "type": "boolean" }
+                }
+              }
+            },
+            "notes": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "calculated": {
+      "type": "object",
+      "description": "Только выход движка PoB2. Каждая величина живёт внутри сценария с явной конфигурацией.",
+      "required": ["engine", "scenarios"],
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "type": "object",
+          "required": ["name", "version", "tree_data_version", "transport"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "version": { "type": "string" },
+            "tree_data_version": { "type": "string" },
+            "transport": { "type": "string" }
+          }
+        },
+        "scenarios": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "purpose", "source_id", "captured_at", "config", "config_rationale", "defence", "skills"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+              "label": { "type": "string", "minLength": 1 },
+              "purpose": { "type": "string", "minLength": 1 },
+              "source_id": { "type": "string" },
+              "captured_at": { "type": "string", "format": "date" },
+              "config": {
+                "type": "object",
+                "description": "Полная конфигурация расчёта. Без неё числа недействительны.",
+                "required": ["resistancePenalty", "enemyIsBoss", "enemyLevel", "enemyArmour"],
+                "additionalProperties": { "type": ["number", "string", "null"] }
+              },
+              "config_rationale": {
+                "type": "object",
+                "description": "Откуда взято каждое значение конфигурации.",
+                "additionalProperties": { "type": "string" }
+              },
+              "defence": {
+                "type": "object",
+                "required": ["life", "energy_shield", "mana", "resistances", "armour", "physical_damage_reduction", "evasion", "evade_chance", "total_ehp"],
+                "additionalProperties": false,
+                "properties": {
+                  "life": { "type": "number" },
+                  "energy_shield": { "type": "number" },
+                  "mana": { "type": "number" },
+                  "resistances": {
+                    "type": "object",
+                    "required": ["fire", "cold", "lightning", "chaos"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "fire": { "type": "number" },
+                      "cold": { "type": "number" },
+                      "lightning": { "type": "number" },
+                      "chaos": { "type": "number" }
+                    }
+                  },
+                  "armour": { "type": "number" },
+                  "physical_damage_reduction": { "type": "number" },
+                  "evasion": { "type": "number" },
+                  "evade_chance": { "type": "number" },
+                  "block_chance": { "type": "number" },
+                  "spell_suppression_chance": { "type": "number" },
+                  "deflection_rating": { "type": "number" },
+                  "stun_threshold": { "type": "number" },
+                  "movement_speed_mod": { "type": "number" },
+                  "total_ehp": { "type": "number" },
+                  "maximum_hit_taken": { "type": "object", "additionalProperties": { "type": "number" } },
+                  "spirit_unreserved": { "type": "number" }
+                }
+              },
+              "skills": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["group", "name", "total_dps", "average_hit"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "group": { "type": "integer", "minimum": 1 },
+                    "name": { "type": "string" },
+                    "gem_level": { "type": ["integer", "null"] },
+                    "total_dps": { "type": "number", "minimum": 0 },
+                    "average_hit": { "type": "number", "minimum": 0 },
+                    "dot_dps": { "type": ["number", "null"], "minimum": 0 },
+                    "speed_per_second": { "type": ["number", "null"] },
+                    "projectile_count": { "type": ["integer", "null"] },
+                    "detonation_time_s": { "type": ["number", "null"], "minimum": 0 },
+                    "crit_chance": { "type": ["number", "null"] }
+                  }
+                }
+              },
+              "notes": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "mechanics_probes": {
+          "type": "array",
+          "description": "Точечные эксперименты движка (что меняется при снятии узла/камня).",
+          "items": {
+            "type": "object",
+            "required": ["id", "question", "method", "results", "conclusion", "captured_at"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+              "question": { "type": "string" },
+              "method": { "type": "string" },
+              "results": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["case"],
+                  "additionalProperties": true,
+                  "properties": { "case": { "type": "string" } }
+                }
+              },
+              "conclusion": { "type": "string" },
+              "limitations": { "type": "array", "items": { "type": "string" } },
+              "captured_at": { "type": "string", "format": "date" }
+            }
+          }
+        }
+      }
+    },
+    "unverified": {
+      "type": "array",
+      "description": "Что требует проверки. У каждого пункта есть способ проверки.",
+      "items": {
+        "type": "object",
+        "required": ["item", "reason", "how_to_verify"],
+        "additionalProperties": false,
+        "properties": {
+          "item": { "type": "string" },
+          "reason": { "type": "string" },
+          "how_to_verify": { "type": "string" },
+          "blocks": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}
