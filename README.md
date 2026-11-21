@@ -4,11 +4,14 @@
 
 ## Текущие данные
 
-- [Профиль Sinkov (JSON)](data/characters/sinkov.json) — schema 2.0.0, построен из реального импорта PoB2:
+- [Профиль Sinkov (JSON)](data/characters/sinkov.json) — schema 2.1.0, построен из реального импорта PoB2:
   разделы `observed` / `imported` / `calculated` / `unverified`.
 - [Схема профиля](docs/character-profile-schema.md) — модель достоверности и автоматические проверки.
 - [Аудит Sinkov по движку PoB2](docs/sinkov-pob-audit.md) — актуальные числа, сценарии урона, разбор духа.
 - [История наблюдений](docs/sinkov-build-audit.md) — более ранний аудит по скриншотам (устарел по числам).
+- [Gear Analyzer](docs/gear-analyzer.md) — сравнение экипировки на движке PoB2 (S5.1).
+- [Пример: ботинки Sinkov](docs/examples/sinkov-boots-comparison.md) — реальный прогон сравнения.
+- [Ограничения PoB2](docs/pob2-limitations.md) — что движок не проверяет и что нельзя посчитать.
 
 Актуальные характеристики рассчитаны движком Path of Building 2 и привязаны к конфигурации
 сценария (штраф сопротивлений, уровень и тип цели). Исторический снимок со скриншотов лежит
@@ -30,4 +33,11 @@
 powershell -ExecutionPolicy Bypass -File scripts/check-pob.ps1
 uv run python scripts/validate_data.py
 uv run pytest tests/
+uv run pytest tests/ -m integration      # тесты с настоящим PoB2 (медленно)
+```
+
+Сравнить предмет с надетым:
+
+```bash
+uv run python scripts/gear_analyze.py --slot Boots --item-json data/candidates/sinkov-boots-windrush-partial.json
 ```

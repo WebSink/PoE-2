@@ -14,7 +14,9 @@
 ## Главный персонаж
 
 - `Sinkov`, Witchhunter (Охотник на ведьм), 46 уровень, лига Standard.
-- Актуальный профиль: `data/characters/sinkov.json` (**schema_version 2.0.0**) — построен из импорта PoB2.
+- Актуальный профиль: `data/characters/sinkov.json` (**schema_version 2.1.0**) — построен из импорта PoB2.
+  Сопротивления до капа живут в `calculated.resistance_baseline` (вывод движка, не импорт);
+  миграция со схемы 2.0.0 — `scripts/migrate_profiles_2_0_to_2_1.py`.
   Разделы `observed` / `imported` / `calculated` / `unverified`; схема — `data/schemas/character-profile.schema.json`,
   описание — `docs/character-profile-schema.md`.
 - Исторический снимок со скриншотов (уровень 45): `data/characters/history/sinkov-2026-11-21-screenshots-v1.json`.
@@ -80,8 +82,14 @@ powershell -ExecutionPolicy Bypass -File scripts/check-pob.ps1
 # Проверить целостность профилей персонажей (схема + доменные правила, без внешних зависимостей)
 uv run python scripts/validate_data.py
 
-# Тесты валидатора и профиля (25 тестов, включая негативные кейсы)
+# Тесты валидатора, профиля и анализатора экипировки (115 тестов, включая негативные кейсы)
 uv run pytest tests/
+
+# Тесты с настоящим PoB2 (7 тестов, ~2 с на загрузку билда)
+uv run pytest tests/ -m integration
+
+# Сравнить предмет с надетым (движок PoB2, временная копия билда)
+uv run python scripts/gear_analyze.py --slot Boots --item-json data/candidates/sinkov-boots-windrush-partial.json
 
 # Интеграционные тесты pob-mcp (12 тестов, реальный Lua-мост)
 cd .tools/pob-mcp
@@ -107,6 +115,9 @@ uv run pytest tests/test_bridge_protocol.py -q
 
 - `docs/architecture.md` — модули и потоки данных.
 - `docs/character-profile-schema.md` — модель профиля и автоматические проверки.
+- `docs/gear-analyzer.md` — модуль сравнения экипировки (`poe2cc/gear/`) и CLI.
+- `docs/pob2-limitations.md` — что PoB2 не проверяет и какие числа без него недоступны.
+- `docs/examples/sinkov-boots-comparison.md` — реальный пример сравнения ботинок.
 - `docs/sinkov-pob-audit.md` — аудит Sinkov по движку PoB2 (актуальные числа).
 - `docs/integrations/mcp-status.md` — что реально подключено и проверено.
 - `docs/integrations/skills-status.md` — скиллы и их регистрация.
