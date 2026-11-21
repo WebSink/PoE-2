@@ -390,3 +390,20 @@ def _context():
     from poe2cc.gear import load_context
 
     return load_context(PROFILE_PATH, "campaign-act3-normal")
+
+
+def test_explicit_engine_path_is_not_silently_replaced(analyze, boots_text):
+    """Явно указанный несуществующий pob-mcp — это ошибка, а не повод взять другой."""
+    report = analyze(boots_text, engine=None, use_engine=True)
+    assert report.engine.status == ENGINE_STATUS_OK  # автоопределение работает
+
+    analyzer = GearAnalyzer(engine_command=str(_fixture_build().parent / "nope-pob-mcp.exe"))
+    report = analyzer.analyze(
+        build_path=_fixture_build(),
+        candidate=parse_item_text(boots_text, slot="Boots"),
+        slot="Boots",
+        context=_context(),
+    )
+
+    assert report.engine.status == ENGINE_STATUS_UNAVAILABLE
+    assert "nope-pob-mcp.exe" in (report.engine.error or "")

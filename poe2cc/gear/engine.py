@@ -90,22 +90,28 @@ class PobEngine(Protocol):
 # Поиск установки
 # --------------------------------------------------------------------------- #
 def locate_engine_command(explicit: str | None = None) -> str | None:
-    """Ищет исполняемый файл pob-mcp: аргумент → env → локальная установка → PATH."""
-    candidates: list[Path] = []
+    """Ищет исполняемый файл pob-mcp: аргумент → env → локальная установка → PATH.
+
+    Если путь указан явно (аргумент или `POE2CC_POB_MCP_CMD`) и его нет — это
+    ошибка, а не повод молча взять другую установку: иначе тест «движок
+    недоступен» проверял бы не то, что заявлено.
+    """
     for value in (explicit, os.environ.get("POE2CC_POB_MCP_CMD")):
-        if value:
-            candidates.append(Path(value))
-    candidates.extend(
-        [
-            ROOT / ".tools" / "pob-mcp" / ".venv" / "Scripts" / "pob-mcp.exe",
-            ROOT / ".tools" / "pob-mcp" / ".venv" / "bin" / "pob-mcp",
-        ]
-    )
-    for candidate in candidates:
+        if not value:
+            continue
+        candidate = Path(value)
         if candidate.is_file():
             return str(candidate)
-    found = shutil.which("pob-mcp")
-    return found
+        found = shutil.which(value)
+        return found
+
+    for candidate in (
+        ROOT / ".tools" / "pob-mcp" / ".venv" / "Scripts" / "pob-mcp.exe",
+        ROOT / ".tools" / "pob-mcp" / ".venv" / "bin" / "pob-mcp",
+    ):
+        if candidate.is_file():
+            return str(candidate)
+    return shutil.which("pob-mcp")
 
 
 def engine_env() -> dict[str, str]:
@@ -169,10 +175,15 @@ class McpStdioEngine:
     ) -> None:
         resolved = locate_engine_command(command)
         if not resolved:
-            raise EngineUnavailable(
-                "не найден pob-mcp: задайте POE2CC_POB_MCP_CMD или установите "
-                ".tools/pob-mcp (см. docs/integrations/mcp-status.md)"
+            hint = (
+                f"указанный путь {command!r} не найден"
+                if command
+                else (
+                    "не найден pob-mcp: задайте POE2CC_POB_MCP_CMD или установите "
+                    ".tools/pob-mcp (см. docs/integrations/mcp-status.md)"
+                )
             )
+            raise EngineUnavailable(hint)
         self._command = resolved
         self._env = env if env is not None else engine_env()
         self._timeout = timeout
