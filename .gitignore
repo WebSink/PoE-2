@@ -32,3 +32,7 @@ Thumbs.db
 # Generated artifacts
 *.log
 coverage/
+
+# Local PoB2 build exports (real account data -- publish only after owner review)
+data/builds/*
+!data/builds/README.md

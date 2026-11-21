@@ -14,6 +14,7 @@
 - [AGENTS.md](AGENTS.md) — правила для агентов и разработчиков.
 - [Архитектура](docs/architecture.md) — модули и контракты данных.
 - [MCP-статус](docs/integrations/mcp-status.md) — PoB2/pob-mcp и проверки.
+- [Импорт персонажа в PoB2](docs/integrations/pob2-character-import.md) — OAuth-процедура и ограничения.
 - [Скиллы](docs/integrations/skills-status.md) — проектные скиллы.
 - [A6-модели](docs/integrations/a6-model-routing.md) — FAST / ANALYZE / CODE.
 

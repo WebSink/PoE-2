@@ -32,6 +32,23 @@
 
 Статус: **PARTIAL** — файлы на месте, автокаталог Cherry ещё не подхватил.
 
+### Проверка 2026-11-21 (повторная)
+
+Файлы присутствуют в двух каталогах, по 13 записей в каждом (9 встроенных + 4 `poe2-*`):
+
+- `%APPDATA%\CherryStudio\Data\Skills\poe2-{build-analysis,development,gear-optimizer,market-research}`
+- `%APPDATA%\CherryStudio\Data\Agents\.claude\skills\poe2-*`
+
+Прямой тест вызова скилла вернул:
+
+```
+Skill poe2-build-analysis is not in this session's skills allowlist
+```
+
+Причина: список доступных скиллов фиксируется при старте сессии, а Cherry
+не просканировал каталог за время её работы. Это не ошибка содержимого скилла —
+frontmatter и пути корректны. Требуется перезапуск Cherry Studio.
+
 ### Что сделать вручную
 
 1. Перезапустить Cherry Studio **или** открыть Settings → Skills и обновить список.
