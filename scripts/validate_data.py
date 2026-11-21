@@ -5,6 +5,8 @@
 и дополнительно — доменные правила целостности, которые схема выразить не может:
 
 * каждый `source_id` существует в `sources[]`;
+* `calculated.resistance_baseline` действительно выведен движком (kind=pob2_engine)
+  и воспроизводится из своих же измерений; в `imported` его быть не может;
 * сопротивления в каждом сценарии пересчитываются из неcapped-значений и штрафа;
 * арифметика духа: максимум − резервы = свободный дух, комбинации согласованы;
 * расчётные величины не существуют вне сценария (нет DPS/EHP на верхнем уровне);
@@ -39,27 +41,36 @@ ELEMENTAL = ("fire", "cold", "lightning")
 # Поля, которых не должно быть на верхнем уровне профиля: расчёты живут
 # только внутри calculated.scenarios[*], иначе теряется конфигурация.
 FORBIDDEN_TOP_LEVEL = {
-    "dps", "total_dps", "ehp", "total_ehp", "life", "energy_shield", "armour",
-    "evasion", "resistances", "stats", "stats_snapshot",
+    "dps",
+    "total_dps",
+    "ehp",
+    "total_ehp",
+    "life",
+    "energy_shield",
+    "armour",
+    "evasion",
+    "resistances",
+    "stats",
+    "stats_snapshot",
 }
 
 SECRET_PATTERNS = (
-    re.compile(r"poesessid", re.I),
-    re.compile(r"refresh_?token", re.I),
-    re.compile(r"access_?token", re.I),
-    re.compile(r"client_?secret", re.I),
-    re.compile(r"\bbearer\s", re.I),
+    re.compile(r"poesessid", re.IGNORECASE),
+    re.compile(r"refresh_?token", re.IGNORECASE),
+    re.compile(r"access_?token", re.IGNORECASE),
+    re.compile(r"client_?secret", re.IGNORECASE),
+    re.compile(r"\bbearer\s", re.IGNORECASE),
 )
 
 # Имена полей, которых в профиле быть не должно вообще.
 SECRET_KEYS = re.compile(
     r"^(token|access_token|refresh_token|lasttoken|lastrefreshtoken|sessionid|poesessid|"
     r"cookie|cookies|password|passwd|secret|client_secret|api_key|apikey|oauth_token)$",
-    re.I,
+    re.IGNORECASE,
 )
 
 # Длинные hex-строки — так выглядят токены. Исключение: явные sha256 артефактов.
-HEX_BLOB = re.compile(r"\b[0-9a-f]{32,}\b", re.I)
+HEX_BLOB = re.compile(r"\b[0-9a-f]{32,}\b", re.IGNORECASE)
 SHA256_FIELDS = {"artifact_sha256", "sha256"}
 
 XML_MARKERS = ("<PathOfBuilding2", "<Build ", "Rarity:")
@@ -184,7 +195,9 @@ def check_provenance(profile: dict) -> list[str]:
         rationale = sc.get("config_rationale", {})
         missing = sorted(set(cfg) - set(rationale))
         if missing:
-            errors.append(f"calculated.scenarios[{i}].config_rationale: нет обоснования для {missing}")
+            errors.append(
+                f"calculated.scenarios[{i}].config_rationale: нет обоснования для {missing}"
+            )
     return errors
 
 
@@ -199,9 +212,10 @@ def check_no_calculated_outside_scenarios(profile: dict) -> list[str]:
 def check_resistances(profile: dict) -> list[str]:
     """Пересчитывает сопротивления каждого сценария из неcapped-значений."""
     errors = []
-    uncapped = profile.get("imported", {}).get("uncapped_resistances")
+    baseline = profile.get("calculated", {}).get("resistance_baseline", {})
+    uncapped = baseline.get("uncapped")
     if not uncapped:
-        return ["imported.uncapped_resistances: отсутствует, сопротивления не проверить"]
+        return ["calculated.resistance_baseline.uncapped: отсутствует, сопротивления не проверить"]
 
     for sc in profile.get("calculated", {}).get("scenarios", []):
         sid = sc.get("id", "?")
@@ -213,7 +227,7 @@ def check_resistances(profile: dict) -> list[str]:
         for element in ELEMENTAL:
             raw = uncapped.get(element)
             if raw is None:
-                errors.append(f"imported.uncapped_resistances.{element}: отсутствует")
+                errors.append(f"calculated.resistance_baseline.uncapped.{element}: отсутствует")
                 continue
             expected = min(raw + penalty, RESIST_CAP)
             actual = got.get(element)
@@ -227,6 +241,107 @@ def check_resistances(profile: dict) -> list[str]:
         chaos_expected = uncapped.get("chaos")
         if chaos_expected is not None and abs(got.get("chaos", -999) - chaos_expected) > 0.5:
             errors.append(f"{sid}: chaos = {got.get('chaos')}, ожидалось {chaos_expected}")
+    return errors
+
+
+def check_resistance_baseline(profile: dict) -> list[str]:
+    """Проверяет происхождение и арифметику `calculated.resistance_baseline`.
+
+    uncapped-сопротивления нельзя хранить в `imported`: клиент и движок показывают
+    только значение после штрафа и капа. Значит, это выход движка, и он обязан
+    лежать в `calculated` с источником kind=pob2_engine и с измерениями, из которых
+    выведен.
+    """
+    errors: list[str] = []
+    baseline = profile.get("calculated", {}).get("resistance_baseline")
+    if not baseline:
+        return [
+            "calculated.resistance_baseline: отсутствует — происхождение "
+            "uncapped-сопротивлений не зафиксировано"
+        ]
+
+    imported = profile.get("imported", {})
+    if "uncapped_resistances" in imported:
+        errors.append(
+            "imported.uncapped_resistances: значения движка нельзя держать в разделе импорта; "
+            "перенесите их в calculated.resistance_baseline"
+        )
+
+    sources = {s["id"]: s for s in profile.get("sources", [])}
+    source_id = baseline.get("source_id")
+    source = sources.get(source_id)
+    if source is None:
+        errors.append(
+            f"calculated.resistance_baseline.source_id: неизвестный источник {source_id!r}"
+        )
+    elif source.get("kind") != "pob2_engine":
+        errors.append(
+            f"calculated.resistance_baseline.source_id: источник {source_id!r} имеет kind="
+            f"{source.get('kind')!r}, а uncapped-значения выводятся только из расчётов движка"
+        )
+
+    uncapped = baseline.get("uncapped", {})
+    scenarios = {sc.get("id"): sc for sc in profile.get("calculated", {}).get("scenarios", [])}
+    penalties = []
+    for i, row in enumerate(baseline.get("evidence", [])):
+        penalty = row.get("resistancePenalty")
+        total = row.get("total", {})
+        penalties.append(penalty)
+        if penalty is None:
+            errors.append(f"calculated.resistance_baseline.evidence[{i}]: нет resistancePenalty")
+            continue
+        for element in ELEMENTAL:
+            raw = uncapped.get(element)
+            if raw is None:
+                errors.append(f"calculated.resistance_baseline.uncapped.{element}: отсутствует")
+                continue
+            expected = raw + penalty
+            actual = total.get(element)
+            if actual is None:
+                errors.append(
+                    f"calculated.resistance_baseline.evidence[{i}].total.{element}: отсутствует"
+                )
+            elif abs(expected - actual) > 0.5:
+                errors.append(
+                    f"calculated.resistance_baseline.evidence[{i}]: {element} = {actual}, "
+                    f"ожидалось {expected:.0f} (uncapped {raw} + штраф {penalty})"
+                )
+        chaos = uncapped.get("chaos")
+        if chaos is not None and abs(total.get("chaos", -999) - chaos) > 0.5:
+            errors.append(
+                f"calculated.resistance_baseline.evidence[{i}]: chaos = {total.get('chaos')}, "
+                f"ожидалось {chaos} (штраф акта не меняет хаос)"
+            )
+        scenario_id = row.get("scenario_id")
+        if scenario_id is not None:
+            scenario = scenarios.get(scenario_id)
+            if scenario is None:
+                errors.append(
+                    f"calculated.resistance_baseline.evidence[{i}].scenario_id: "
+                    f"неизвестный сценарий {scenario_id!r}"
+                )
+            else:
+                if scenario.get("config", {}).get("resistancePenalty") != penalty:
+                    errors.append(
+                        f"calculated.resistance_baseline.evidence[{i}]: штраф {penalty} не совпадает "
+                        f"со штрафом сценария {scenario_id!r}"
+                    )
+                got = scenario.get("defence", {}).get("resistances", {})
+                for element in ELEMENTAL + ("chaos",):
+                    expected = min(total.get(element, -999), RESIST_CAP)
+                    if abs(got.get(element, -999) - expected) > 0.5:
+                        errors.append(
+                            f"calculated.resistance_baseline.evidence[{i}]: сценарий {scenario_id!r} "
+                            f"показывает {element} = {got.get(element)}, ожидалось {expected:.0f} "
+                            f"(total {total.get(element)} после капа {RESIST_CAP:.0f})"
+                        )
+
+    reference = baseline.get("penalty_reference")
+    if reference is not None and reference not in penalties:
+        errors.append(
+            "calculated.resistance_baseline.penalty_reference: нет измерения с этим штрафом "
+            f"({reference}) в evidence"
+        )
     return errors
 
 
@@ -246,15 +361,12 @@ def check_spirit(profile: dict) -> list[str]:
 
     if abs((maximum - total) - free) > 0.01:
         errors.append(
-            f"дух: максимум {maximum} - резерв {total} = {maximum - total}, "
-            f"но free = {free}"
+            f"дух: максимум {maximum} - резерв {total} = {maximum - total}, но free = {free}"
         )
 
     summed = sum(e.get("spirit", 0) for e in entries)
     if abs(summed - total) > 0.01:
-        errors.append(
-            f"дух: сумма резервов по способностям {summed} != total_reserved {total}"
-        )
+        errors.append(f"дух: сумма резервов по способностям {summed} != total_reserved {total}")
 
     by_name = {e["ability"]: e for e in entries}
     for combo in spirit.get("simultaneous_combinations", []):
@@ -270,8 +382,7 @@ def check_spirit(profile: dict) -> list[str]:
                 used += entry.get("spirit", 0)
         if abs(used - combo.get("spirit_used", -1)) > 0.01:
             errors.append(
-                f"дух: комбинация {names} = {combo.get('spirit_used')}, "
-                f"по способностям {used}"
+                f"дух: комбинация {names} = {combo.get('spirit_used')}, по способностям {used}"
             )
         if combo.get("fits") != (used <= maximum):
             errors.append(
@@ -357,6 +468,7 @@ def validate_profile(path: Path, schema: dict) -> list[str]:
     for check in (
         check_provenance,
         check_no_calculated_outside_scenarios,
+        check_resistance_baseline,
         check_resistances,
         check_spirit,
         check_scenario_skills,

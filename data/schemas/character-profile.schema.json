@@ -165,18 +165,6 @@
             }
           }
         },
-        "uncapped_resistances": {
-          "type": "object",
-          "description": "Сопротивления до применения штрафа акта. Огонь выведен из двух измеренных точек (-60 -> 49 и -20 -> 75 при капе): uncapped = 109.",
-          "required": ["fire", "cold", "lightning", "chaos"],
-          "additionalProperties": false,
-          "properties": {
-            "fire": { "type": "number" },
-            "cold": { "type": "number" },
-            "lightning": { "type": "number" },
-            "chaos": { "type": "number" }
-          }
-        },
         "spirit_reservations": {
           "type": "object",
           "description": "Разбор резервирования духа: измерено движком по одному источнику за раз.",
@@ -224,7 +212,7 @@
     "calculated": {
       "type": "object",
       "description": "Только выход движка PoB2. Каждая величина живёт внутри сценария с явной конфигурацией.",
-      "required": ["engine", "scenarios"],
+      "required": ["engine", "resistance_baseline", "scenarios"],
       "additionalProperties": false,
       "properties": {
         "engine": {
@@ -236,6 +224,69 @@
             "version": { "type": "string" },
             "tree_data_version": { "type": "string" },
             "transport": { "type": "string" }
+          }
+        },
+        "resistance_baseline": {
+          "type": "object",
+          "description": "Сопротивления до штрафа акта и до капа. Это выход движка, а НЕ данные импорта из аккаунта: клиент и движок показывают только значение после штрафа и капа, поэтому «до штрафа» восстанавливается из измерений при разных resistancePenalty.",
+          "required": ["source_id", "captured_at", "method", "penalty_reference", "uncapped", "evidence"],
+          "additionalProperties": false,
+          "properties": {
+            "source_id": {
+              "type": "string",
+              "description": "Ссылка на sources[].id; у источника kind обязан быть pob2_engine."
+            },
+            "captured_at": { "type": "string", "format": "date" },
+            "method": { "type": "string", "minLength": 1 },
+            "penalty_reference": {
+              "type": "number",
+              "description": "Штраф, при котором uncapped равно измеренному итогу (обычно 0)."
+            },
+            "uncapped": {
+              "type": "object",
+              "required": ["fire", "cold", "lightning", "chaos"],
+              "additionalProperties": false,
+              "properties": {
+                "fire": { "type": "number" },
+                "cold": { "type": "number" },
+                "lightning": { "type": "number" },
+                "chaos": { "type": "number" }
+              }
+            },
+            "evidence": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Измерения движка, из которых выведены uncapped-значения.",
+              "items": {
+                "type": "object",
+                "required": ["resistancePenalty", "total"],
+                "additionalProperties": false,
+                "properties": {
+                  "resistancePenalty": { "type": "number" },
+                  "total": {
+                    "type": "object",
+                    "required": ["fire", "cold", "lightning", "chaos"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "fire": { "type": "number" },
+                      "cold": { "type": "number" },
+                      "lightning": { "type": "number" },
+                      "chaos": { "type": "number" }
+                    }
+                  },
+                  "scenario_id": {
+                    "type": ["string", "null"],
+                    "description": "Сценарий, в котором получено измерение; null — отдельный вызов set_config без сценария."
+                  },
+                  "stat_fields": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Поля get_stats, из которых взяты значения (FireResistTotal и т. п.). Это значения до капа."
+                  }
+                }
+              }
+            },
+            "notes": { "type": "array", "items": { "type": "string" } }
           }
         },
         "scenarios": {

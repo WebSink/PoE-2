@@ -1,5 +1,5 @@
 {
- "schema_version": "2.0.0",
+ "schema_version": "2.1.0",
  "profile_id": "sinkov-witchhunter-46",
  "character": {
   "name": "Sinkov",
@@ -554,12 +554,6 @@
     "Причина отрицательного свободного духа: сумма резервов 70 при максимуме 30.",
     "SpiritReserved в выводе движка упирается в 30 (нельзя зарезервировать больше максимума), поэтому 70 - 30 = -40 видно только через SpiritUnreserved."
    ]
-  },
-  "uncapped_resistances": {
-   "fire": 109,
-   "cold": 66,
-   "lightning": 55,
-   "chaos": 0
   }
  },
  "calculated": {
@@ -568,6 +562,73 @@
    "version": "0.23.1",
    "tree_data_version": "0_5",
    "transport": "pob-mcp (stdio MCP), load_build -> get_stats/set_config/set_main_skill"
+  },
+  "resistance_baseline": {
+   "source_id": "pob2-engine-2026-11-21",
+   "captured_at": "2026-11-21",
+   "method": "get_stats при resistancePenalty = 0: FireResistTotal = 109, ColdResistTotal = 66, LightningResistTotal = 55, ChaosResistTotal = 0. Поля *ResistTotal — сопротивление после штрафа акта и до капа 75%; при штрафах -20 и -60 они уменьшаются ровно на величину штрафа, что и подтверждает evidence.",
+   "penalty_reference": 0,
+   "uncapped": {
+    "fire": 109,
+    "cold": 66,
+    "lightning": 55,
+    "chaos": 0
+   },
+   "evidence": [
+    {
+     "resistancePenalty": 0,
+     "total": {
+      "fire": 109,
+      "cold": 66,
+      "lightning": 55,
+      "chaos": 0
+     },
+     "scenario_id": null,
+     "stat_fields": [
+      "FireResistTotal",
+      "ColdResistTotal",
+      "LightningResistTotal",
+      "ChaosResistTotal"
+     ]
+    },
+    {
+     "resistancePenalty": -20,
+     "total": {
+      "fire": 89,
+      "cold": 46,
+      "lightning": 35,
+      "chaos": 0
+     },
+     "scenario_id": "campaign-act3-normal",
+     "stat_fields": [
+      "FireResistTotal",
+      "ColdResistTotal",
+      "LightningResistTotal",
+      "ChaosResistTotal"
+     ]
+    },
+    {
+     "resistancePenalty": -60,
+     "total": {
+      "fire": 49,
+      "cold": 6,
+      "lightning": -5,
+      "chaos": 0
+     },
+     "scenario_id": "endgame-pinnacle-as-imported",
+     "stat_fields": [
+      "FireResistTotal",
+      "ColdResistTotal",
+      "LightningResistTotal",
+      "ChaosResistTotal"
+     ]
+    }
+   ],
+   "notes": [
+    "Это выход движка PoB2, а не данные импорта из аккаунта: клиент показывает только значение после штрафа и капа.",
+    "capped = true означает, что хотя бы одно стихийное значение в этой точке упёрлось в кап 75% (огонь при -20: 89 -> 75).",
+    "Хаос штрафом акта не уменьшается: ChaosResistTotal = 0 при любом штрафе."
+   ]
   },
   "scenarios": [
    {
