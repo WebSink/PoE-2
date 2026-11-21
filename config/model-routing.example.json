@@ -1,0 +1,30 @@
+{
+  "$comment": "Логические режимы A6. ID взяты из локальной конфигурации Cherry Studio; секретов нет. Перед сменой модели проверить поддержку tool calling.",
+  "version": 1,
+  "modes": {
+    "FAST": {
+      "model_id": "deepseek-v4.1-flash",
+      "purpose": "Рутинные операции, извлечение данных, короткие ответы.",
+      "tool_calling": "verified",
+      "verified_at": "2026-11-21"
+    },
+    "ANALYZE": {
+      "model_id": "gpt-6.1-sol",
+      "purpose": "Сложный анализ билда, приоритизация апгрейдов, объяснения.",
+      "tool_calling": "unverified",
+      "note": "Модель присутствует в локальной конфигурации; поддержка инструментов в агентном режиме не проверялась."
+    },
+    "CODE": {
+      "model_id": "deepseek-v4.1-flash",
+      "purpose": "Правки кода, тесты, git-операции в разрешённых границах.",
+      "tool_calling": "verified",
+      "verified_at": "2026-11-21"
+    }
+  },
+  "constraints": {
+    "no_secrets": true,
+    "no_parallel_models_by_default": true,
+    "stop_after_two_identical_failures": true,
+    "send_compact_context_only": true
+  }
+}
