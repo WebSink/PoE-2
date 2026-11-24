@@ -15,7 +15,9 @@
 
 - `Sinkov`, Witchhunter (Охотник на ведьм), 46 уровень, лига Standard.
 - Актуальный профиль: `data/characters/sinkov.json` (**schema_version 2.1.0**) — построен из импорта PoB2.
-  Сопротивления до капа живут в `calculated.resistance_baseline` (вывод движка, не импорт);
+  Сопротивления до капа живут в `calculated.resistance_baseline` (вывод движка, не импорт),
+  там же `maximum` / `maximum_method` — измеренный кап (по умолчанию 75): отдельного поля
+  максимума PoB2 не отдаёт, он выводится насыщением;
   миграция со схемы 2.0.0 — `scripts/migrate_profiles_2_0_to_2_1.py`.
   Разделы `observed` / `imported` / `calculated` / `unverified`; схема — `data/schemas/character-profile.schema.json`,
   описание — `docs/character-profile-schema.md`.
@@ -82,7 +84,7 @@ powershell -ExecutionPolicy Bypass -File scripts/check-pob.ps1
 # Проверить целостность профилей персонажей (схема + доменные правила, без внешних зависимостей)
 uv run python scripts/validate_data.py
 
-# Тесты валидатора, профиля и анализатора экипировки (116 тестов, включая негативные кейсы)
+# Тесты валидатора, профиля и анализатора экипировки (144 теста, включая негативные кейсы)
 uv run pytest tests/
 
 # Тесты с настоящим PoB2 (7 тестов, ~2 с на загрузку билда)
