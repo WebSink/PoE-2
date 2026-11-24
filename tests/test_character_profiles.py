@@ -20,6 +20,7 @@ def test_real_profile_has_no_errors(validator, schema, profile):
     for check in (
         validator.check_provenance,
         validator.check_no_calculated_outside_scenarios,
+        validator.check_resistance_baseline,
         validator.check_resistances,
         validator.check_spirit,
         validator.check_scenario_skills,
@@ -50,8 +51,11 @@ def test_scenarios_do_not_mix_resistance_penalties(profile):
     assert penalties == {-20, -60}
     for sc in profile["calculated"]["scenarios"]:
         # каждое сопротивление сценария посчитано при своём штрафе
-        expected_fire = min(profile["imported"]["uncapped_resistances"]["fire"]
-                            + sc["config"]["resistancePenalty"], 75)
+        expected_fire = min(
+            profile["calculated"]["resistance_baseline"]["uncapped"]["fire"]
+            + sc["config"]["resistancePenalty"],
+            75,
+        )
         assert sc["defence"]["resistances"]["fire"] == expected_fire, sc["id"]
 
 
@@ -191,4 +195,55 @@ def test_observed_level_not_above_current(profile):
 def test_profile_is_valid_json_utf8(validator):
     raw = (validator.ROOT / PROFILE).read_bytes()
     text = raw.decode("utf-8")
-    assert json.loads(text)["schema_version"] == "2.0.0"
+    assert json.loads(text)["schema_version"] == "2.1.0"
+
+
+# --------------------------------------------------------------------------- #
+# Провенанс uncapped-сопротивлений (схема 2.1.0)
+# --------------------------------------------------------------------------- #
+def test_resistance_baseline_is_engine_provenance(validator, profile):
+    """uncapped-сопротивления — расчёт движка, а не импорт из аккаунта."""
+    assert "uncapped_resistances" not in profile["imported"]
+    baseline = profile["calculated"]["resistance_baseline"]
+    sources = {s["id"]: s for s in profile["sources"]}
+    assert sources[baseline["source_id"]]["kind"] == "pob2_engine"
+    assert baseline["penalty_reference"] == 0
+    assert validator.check_resistance_baseline(profile) == []
+
+
+def test_resistance_baseline_must_not_live_in_imported(validator, profile_copy):
+    """Если вернуть блок в imported, проверка обязана это заметить."""
+    profile_copy["imported"]["uncapped_resistances"] = {
+        "fire": 109,
+        "cold": 66,
+        "lightning": 55,
+        "chaos": 0,
+    }
+    errors = validator.check_resistance_baseline(profile_copy)
+    assert any("imported.uncapped_resistances" in e for e in errors)
+
+
+def test_resistance_baseline_requires_engine_source(validator, profile_copy):
+    profile_copy["calculated"]["resistance_baseline"]["source_id"] = "pob2-import-2026-11-21"
+    errors = validator.check_resistance_baseline(profile_copy)
+    assert any("pob2_import" in e for e in errors)
+
+
+def test_resistance_baseline_evidence_is_recomputed(validator, profile_copy):
+    profile_copy["calculated"]["resistance_baseline"]["evidence"][1]["total"]["cold"] = 60
+    errors = validator.check_resistance_baseline(profile_copy)
+    assert any("cold" in e for e in errors)
+
+
+def test_resistance_baseline_evidence_must_match_scenario(validator, profile_copy):
+    """Evidence сверяется с капнутым сопротивлением своего сценария."""
+    profile_copy["calculated"]["scenarios"][0]["defence"]["resistances"]["cold"] = 60
+    errors = validator.check_resistance_baseline(profile_copy)
+    assert any("campaign-act3-normal" in e for e in errors)
+
+
+def test_resistance_baseline_evidence_penalty_must_match_scenario(validator, profile_copy):
+    evidence = profile_copy["calculated"]["resistance_baseline"]["evidence"]
+    evidence[1]["resistancePenalty"] = -60
+    errors = validator.check_resistance_baseline(profile_copy)
+    assert any("штраф" in e for e in errors)
