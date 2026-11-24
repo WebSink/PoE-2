@@ -10,6 +10,7 @@ from poe2cc.gear.rating import (
     VERDICT_DOWNGRADE,
     VERDICT_INCONCLUSIVE,
     VERDICT_NOT_EQUIPPABLE,
+    VERDICT_REQUIREMENTS_BROKEN,
     VERDICT_SIDEGRADE,
     VERDICT_UPGRADE,
     evaluate,
@@ -125,3 +126,51 @@ def test_as_dict_is_serialisable():
     assert payload["verdict_label"]
     assert payload["thresholds"]["upgrade"] == UPGRADE_THRESHOLD
     assert payload["components"][0]["key"] == "life"
+
+
+# --------------------------------------------------------------------------- #
+# Блокирующий каскад требований (review S5.1.1, пункт 2)
+# --------------------------------------------------------------------------- #
+
+
+def test_broken_requirements_override_a_positive_score():
+    rating = _evaluate(
+        stat_deltas={"life": 200.0},
+        bases={"life": "engine"},
+        blocking_requirements=["Ловкость: 70 меньше требуемых 90"],
+    )
+
+    assert rating.score > UPGRADE_THRESHOLD
+    assert rating.verdict == VERDICT_REQUIREMENTS_BROKEN
+    assert rating.provisional_verdict is None
+    assert any("нарушает требования" in line for line in rating.explanation)
+    assert any("Ловкость" in line for line in rating.explanation)
+
+
+def test_broken_requirements_beat_a_negative_score_too():
+    rating = _evaluate(
+        stat_deltas={"life": -200.0},
+        bases={"life": "engine"},
+        blocking_requirements=["Сила: 30 меньше требуемых 60"],
+    )
+
+    assert rating.verdict == VERDICT_REQUIREMENTS_BROKEN
+
+
+def test_not_equippable_wins_over_broken_requirements():
+    """Кандидат сам не надевается — это отдельная причина, а не каскад."""
+    rating = _evaluate(
+        stat_deltas={"life": 200.0},
+        bases={},
+        equippable=False,
+        blocking_requirements=["Ловкость: 70 меньше требуемых 90"],
+    )
+
+    assert rating.verdict == VERDICT_NOT_EQUIPPABLE
+
+
+def test_without_blocking_requirements_a_positive_score_is_upgrade_again():
+    rating = _evaluate(stat_deltas={"life": 200.0}, bases={"life": "engine"})
+
+    assert rating.verdict == VERDICT_UPGRADE
+    assert rating.provisional_verdict is None

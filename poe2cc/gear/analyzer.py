@@ -41,6 +41,10 @@ STATUS_UNKNOWN = "unknown"
 BASIS_ENGINE = "engine"
 BASIS_DECLARED = "declared"
 
+#: Происхождение капа сопротивления.
+BASIS_BASELINE = "profile_baseline"
+BASIS_REFERENCE = "reference_cap"
+
 ENGINE_STATUS_OK = "ok"
 ENGINE_STATUS_SKIPPED = "skipped"
 ENGINE_STATUS_UNAVAILABLE = "unavailable"
@@ -142,6 +146,10 @@ class ResistanceChange:
     after_capped: float | None
     basis: str
     notes: list[str] = field(default_factory=list)
+    #: Предел сопротивления для состояния до/после; None — кап неизвестен.
+    before_cap: float | None = None
+    after_cap: float | None = None
+    cap_basis: str | None = None
 
     @property
     def delta_capped(self) -> float | None:
@@ -164,7 +172,9 @@ class ResistanceChange:
             "after_capped": _round(self.after_capped),
             "delta_uncapped": _round(self.delta_uncapped),
             "delta_capped": _round(self.delta_capped),
-            "cap": RESIST_CAP,
+            "before_cap": _round(self.before_cap),
+            "after_cap": _round(self.after_cap),
+            "cap_basis": self.cap_basis,
             "basis": self.basis,
             "notes": list(self.notes),
         }
@@ -288,7 +298,30 @@ class _EngineRun:
     items_after: dict[str, Any]
     sanity: list[str]
     info: dict[str, Any]
-    workdir_removed: bool = False
+
+
+@dataclass
+class _TempState:
+    """Существование временной копии билда.
+
+    `removed` меняется только после проверки, что каталога действительно больше
+    нет. Если очистка упала или каталог остался, в отчёте будет `removed=False`,
+    а не удобная неправда.
+    """
+
+    used: bool = False
+    removed: bool = True
+
+
+def _remove_tree(path: Path) -> bool:
+    """Удаляет каталог и возвращает True только при подтверждённом отсутствии."""
+    if not path.exists():
+        return True
+    try:
+        shutil.rmtree(path)
+    except OSError:
+        return not path.exists()
+    return not path.exists()
 
 
 # --------------------------------------------------------------------------- #
@@ -342,8 +375,11 @@ class GearAnalyzer:
             raise AnalysisError(str(exc)) from exc
         current_item = equipped.get(canonical_slot)
 
+        baseline_attributes = requirements_module.attributes_without_slot_item(
+            dict(context.character.attributes), current_item
+        )
         requirements_report = requirements_module.check_candidate(
-            candidate, context.character.level, context.character.attributes
+            candidate, context.character.level, baseline_attributes
         )
 
         warnings: list[str] = list(candidate.declared.warnings)
@@ -355,21 +391,20 @@ class GearAnalyzer:
 
         engine_state = EngineState(status=ENGINE_STATUS_SKIPPED)
         engine_run: _EngineRun | None = None
-        temp_copy_removed = True
-        temp_copy_used = False
+        temp = _TempState()
 
         reason = self._engine_skip_reason(candidate, requirements_report, use_engine)
         if reason:
             engine_state.reason = reason
             engine_state.status = ENGINE_STATUS_SKIPPED
         else:
-            temp_copy_used = True
             try:
                 engine_run = self._run_engine(
                     build,
                     candidate,
                     canonical_slot,
                     context.scenario,
+                    temp=temp,
                     engine=engine,
                 )
                 engine_state.status = ENGINE_STATUS_OK
@@ -389,9 +424,11 @@ class GearAnalyzer:
                 engine_state.status = ENGINE_STATUS_ERROR
                 engine_state.error = str(exc)
                 warnings.append(f"ошибка движка: {exc}")
-            finally:
-                # временную копию удаляет сам `_run_engine` в своём finally
-                temp_copy_removed = engine_run.workdir_removed if engine_run else True
+            except Exception as exc:  # непредвиденная ошибка не должна терять отчёт
+                engine_state.status = ENGINE_STATUS_ERROR
+                engine_state.error = f"{type(exc).__name__}: {exc}"
+                engine_state.reason = "непредвиденная ошибка движка"
+                warnings.append(f"непредвиденная ошибка движка: {type(exc).__name__}: {exc}")
 
         sha_after = hashlib.sha256(build.read_bytes()).hexdigest()
         integrity = XmlIntegrity(
@@ -399,28 +436,31 @@ class GearAnalyzer:
             sha256_before=sha_before,
             sha256_after=sha_after,
             unchanged=sha_before == sha_after,
-            temp_copy_used=temp_copy_used,
-            temp_copy_removed=temp_copy_removed,
+            temp_copy_used=temp.used,
+            temp_copy_removed=temp.removed,
         )
         if not integrity.unchanged:
             warnings.append(
                 "ВНИМАНИЕ: исходный XML изменился во время анализа — результат недействителен"
             )
 
-        attributes = (
-            self._attributes_from_stats(engine_run.stats_before)
-            if engine_run
-            else dict(context.character.attributes)
-        )
-        if engine_run:
+        attributes_after: dict[str, float] | None = None
+        if engine_run is not None:
+            # статы после замены уже включают кандидата; его собственные бонусы
+            # не должны помогать ему пройти свои же требования
+            attributes_after = self._attributes_from_stats(engine_run.stats_after)
+            baseline_attributes = requirements_module.attributes_without_slot_item(
+                attributes_after, candidate
+            )
             requirements_report = requirements_module.check_candidate(
-                candidate, context.character.level, attributes
+                candidate, context.character.level, baseline_attributes
             )
 
         cascade = requirements_module.check_attribute_cascade(
             candidate,
-            attributes,
+            baseline_attributes,
             self._aggregate_requirements(engine_run),
+            attributes_after,
         )
 
         deltas, resistances = self._compute_deltas(candidate, current_item, context, engine_run)
@@ -429,7 +469,12 @@ class GearAnalyzer:
         lost_defences, gained_defences = self._diff_defences(candidate, current_item)
 
         missing = sorted(
-            delta.stat for delta in deltas if delta.material and delta.status != STATUS_COMPUTED
+            {delta.stat for delta in deltas if delta.material and delta.status != STATUS_COMPUTED}
+            | {
+                _ELEMENT_TO_STAT[change.element]
+                for change in resistances
+                if change.delta_capped is None
+            }
         )
         capped_deltas = {
             _ELEMENT_TO_STAT[change.element]: change.delta_capped
@@ -451,9 +496,10 @@ class GearAnalyzer:
             ehp_delta_percent=ehp.delta_percent if ehp else None,
             dps_delta_percent=dps.delta_percent if dps else None,
             capped_resistances=capped_deltas,
+            blocking_requirements=[check.detail for check in cascade.blocking],
         )
 
-        limitations = self._limitations(candidate, current_item, engine_state)
+        limitations = self._limitations(candidate, current_item, engine_state, resistances)
         warnings.extend(self._resistance_warnings(resistances))
         if cascade.blocking:
             warnings.append(
@@ -512,11 +558,14 @@ class GearAnalyzer:
         slot: str,
         scenario: Scenario,
         *,
+        temp: _TempState,
         engine: engine_module.PobEngine | None,
     ) -> _EngineRun:
         own_engine = engine is None
         active = engine
         workdir = Path(tempfile.mkdtemp(prefix="poe2cc-gear-"))
+        temp.used = True
+        temp.removed = False
         result: _EngineRun | None = None
         try:
             copy_path = workdir / "build.xml"
@@ -551,11 +600,12 @@ class GearAnalyzer:
             )
             return result
         finally:
-            if own_engine and active is not None:
-                active.close()
-            shutil.rmtree(workdir, ignore_errors=True)
-            if result is not None:
-                result.workdir_removed = not workdir.exists()
+            try:
+                if own_engine and active is not None:
+                    active.close()
+            finally:
+                # удаляем всегда: и при успехе, и при исключении, и при падении движка
+                temp.removed = _remove_tree(workdir)
 
     @staticmethod
     def _attributes_from_stats(engine_stats: dict[str, Any]) -> dict[str, float]:
@@ -589,7 +639,7 @@ class GearAnalyzer:
     ) -> tuple[list[StatDelta], list[ResistanceChange]]:
         if engine_run is not None:
             deltas = self._engine_deltas(engine_run)
-            resistances = self._engine_resistances(engine_run)
+            resistances = self._engine_resistances(engine_run, context, candidate, current_item)
             return deltas, resistances
 
         deltas = self._declared_deltas(candidate, current_item)
@@ -628,20 +678,67 @@ class GearAnalyzer:
             )
         return deltas
 
-    def _engine_resistances(self, engine_run: _EngineRun) -> list[ResistanceChange]:
+    def _engine_resistances(
+        self,
+        engine_run: _EngineRun,
+        context: ProfileContext,
+        candidate: Item,
+        current_item: Item | None,
+    ) -> list[ResistanceChange]:
+        """Сопротивления из движка вместе с фактическим капом.
+
+        Отдельного поля «кап сопротивления» движок не отдаёт. Но если значение
+        упирается в кап, `FireResist` меньше `FireResistTotal` ровно на избыток:
+        тогда `FireResist` и есть кап для этого состояния. Если насыщения нет,
+        кап берётся из измеренного профиля, а его изменение — из объявленных
+        модификаторов предмета; без этих данных кап остаётся неизвестным.
+        """
         changes: list[ResistanceChange] = []
         before, after = engine_run.stats_before, engine_run.stats_after
+        baseline_max = context.resistance_baseline.maximum if context.resistance_baseline else None
+        declared_cap_delta = _declared_max_deltas(candidate, current_item)
         for stat_key, element in _RESISTANCE_ELEMENTS.items():
             capped_field = stats.ENGINE_FIELDS[stat_key]
             total_field = stats.ENGINE_UNCAPPED_FIELDS[stat_key]
-            notes = [f"get_stats.{capped_field} (после капа)", f"get_stats.{total_field} (до капа)"]
+            before_uncapped = _as_float(before.get(total_field))
+            after_uncapped = _as_float(after.get(total_field))
+            before_capped = _as_float(before.get(capped_field))
+            after_capped = _as_float(after.get(capped_field))
+            before_cap, before_basis = _resolve_cap(
+                before_uncapped,
+                before_capped,
+                fallback=(baseline_max or {}).get(element),
+            )
+            after_cap, after_basis = _resolve_cap(
+                after_uncapped,
+                after_capped,
+                fallback=(baseline_max or {}).get(element),
+            )
+            if after_cap is None and before_cap is not None:
+                delta = declared_cap_delta.get(element)
+                after_cap = before_cap + (delta or 0.0)
+                # базовый кап не становится «объявленным» без модификатора предмета
+                after_basis = BASIS_DECLARED if delta is not None else before_basis
+            notes = [
+                f"get_stats.{capped_field} (после капа)",
+                f"get_stats.{total_field} (до капа)",
+            ]
+            cap_basis = _pick_cap_basis(before_basis, after_basis)
+            if cap_basis is None:
+                notes.append(
+                    "кап сопротивления неизвестен: движок не отдаёт его полем, "
+                    "а насыщения нет — в профиле нет измеренного капа"
+                )
             changes.append(
                 ResistanceChange(
                     element=element,
-                    before_uncapped=_as_float(before.get(total_field)),
-                    after_uncapped=_as_float(after.get(total_field)),
-                    before_capped=_as_float(before.get(capped_field)),
-                    after_capped=_as_float(after.get(capped_field)),
+                    before_uncapped=before_uncapped,
+                    after_uncapped=after_uncapped,
+                    before_capped=before_capped,
+                    after_capped=after_capped,
+                    before_cap=before_cap,
+                    after_cap=after_cap,
+                    cap_basis=cap_basis,
                     basis=BASIS_ENGINE,
                     notes=notes,
                 )
@@ -711,6 +808,8 @@ class GearAnalyzer:
         penalty = float(context.scenario.config.get("resistancePenalty") or 0.0)
         old = current_item.declared if current_item else None
         new = candidate.declared
+        maximum = baseline.maximum if baseline is not None else None
+        cap_delta = _declared_max_deltas(candidate, current_item)
 
         changes: list[ResistanceChange] = []
         for stat_key, element in _RESISTANCE_ELEMENTS.items():
@@ -738,16 +837,46 @@ class GearAnalyzer:
             after_uncapped = before_uncapped - old_value + new_value
 
             applied_penalty = 0.0 if element == "chaos" else penalty
-            before_capped = min(before_uncapped + applied_penalty, RESIST_CAP)
-            after_capped = min(after_uncapped + applied_penalty, RESIST_CAP)
-            notes.append(
-                f"baseline {before_uncapped:g} (источник {baseline.source_id}), "
-                f"штраф сценария {applied_penalty:g}, кап {RESIST_CAP:g}"
-            )
+            before_total = before_uncapped + applied_penalty
+            after_total = after_uncapped + applied_penalty
+
+            measured_cap = (maximum or {}).get(element)
+            before_cap = float(measured_cap) if measured_cap is not None else None
+            after_cap: float | None = None
+            cap_basis: str | None = None
+            delta_max = cap_delta.get(element, 0.0)
+            if before_cap is not None:
+                after_cap = before_cap + delta_max
+                cap_basis = BASIS_DECLARED if abs(delta_max) > 1e-9 else BASIS_BASELINE
+                before_capped = min(before_total, before_cap)
+                after_capped = min(after_total, after_cap)
+                notes.append(
+                    f"baseline {before_uncapped:g} (источник {baseline.source_id}), "
+                    f"штраф сценария {applied_penalty:g}, кап {before_cap:g}% "
+                    f"(профиль, {baseline.captured_at})"
+                )
+                if abs(delta_max) > 1e-9:
+                    notes.append(
+                        f"кап меняется модификатором предмета: {before_cap:g}% -> {after_cap:g}%"
+                    )
+            else:
+                # кап неизвестен; ниже 75% он на итог не влияет, выше — уже влияет
+                before_capped = before_total if before_total <= RESIST_CAP else None
+                after_capped = after_total if after_total <= RESIST_CAP else None
+                notes.append(
+                    f"baseline {before_uncapped:g} (источник {baseline.source_id}), "
+                    f"штраф сценария {applied_penalty:g}"
+                )
+                notes.append(
+                    "измеренного капа сопротивления в профиле нет: "
+                    "значения выше 75% без движка не переводятся в итог"
+                )
             if element == "chaos":
                 notes.append("штраф акта не влияет на сопротивление хаосу")
-            if abs(after_uncapped + applied_penalty - after_capped) > 1e-9:
-                notes.append("значение упирается в кап: избыток сопротивления не даёт выживаемости")
+            if before_capped is not None and before_total - before_capped > 1e-9:
+                notes.append(f"до замены значение упирается в кап {before_cap:g}%")
+            if after_capped is not None and after_total - after_capped > 1e-9:
+                notes.append("после замены избыток сопротивления не даёт выживаемости")
             changes.append(
                 ResistanceChange(
                     element=element,
@@ -755,6 +884,9 @@ class GearAnalyzer:
                     after_uncapped=after_uncapped,
                     before_capped=before_capped,
                     after_capped=after_capped,
+                    before_cap=before_cap,
+                    after_cap=after_cap,
+                    cap_basis=cap_basis,
                     basis=BASIS_DECLARED,
                     notes=notes,
                 )
@@ -843,7 +975,9 @@ class GearAnalyzer:
 
         Локальное значение вроде «Energy Shield: 79» и глобальный модификатор
         «+43 to maximum Energy Shield» — разные вещи, поэтому они не суммируются
-        в один показатель.
+        в один показатель. Если источник кандидата не гарантирует полноту списка
+        защит, отсутствующий ключ — это UNKNOWN, а не ноль: потеря 79 ES не
+        выдумывается только потому, что её умолчали.
         """
         if current_item is None:
             return {}, {}
@@ -851,14 +985,20 @@ class GearAnalyzer:
         new = candidate.defences
         lost: dict[str, float] = {}
         gained: dict[str, float] = {}
-        for defence, value in old.items():
-            if defence not in new:
+        for defence in sorted(set(old) | set(new)):
+            before = old.get(defence)
+            if before is None:
+                before = 0.0 if current_item.defences_complete else None
+            after = new.get(defence)
+            if after is None:
+                after = 0.0 if candidate.defences_complete else None
+            if before is None or after is None:
                 continue
-            if value - new[defence] > 1e-9:
-                lost[defence] = value - new[defence]
-        for defence, value in new.items():
-            if value - old.get(defence, 0.0) > 1e-9:
-                gained[defence] = value - old.get(defence, 0.0)
+            difference = after - before
+            if difference < -1e-9:
+                lost[defence] = -difference
+            elif difference > 1e-9:
+                gained[defence] = difference
         return lost, gained
 
     # -- текст отчёта -------------------------------------------------------- #
@@ -867,6 +1007,7 @@ class GearAnalyzer:
         candidate: Item,
         current_item: Item | None,
         engine_state: EngineState,
+        resistances: list[ResistanceChange],
     ) -> list[str]:
         limitations: list[str] = []
         if engine_state.status != ENGINE_STATUS_OK:
@@ -908,7 +1049,8 @@ class GearAnalyzer:
         missing_defences = sorted(
             defence
             for defence in (current_item.defences if current_item else {})
-            if defence not in candidate.defences
+            # для полного списка защит отсутствие ключа — это ноль, а не пробел в данных
+            if defence not in candidate.defences and not candidate.defences_complete
         )
         if missing_defences:
             limitations.append(
@@ -919,6 +1061,14 @@ class GearAnalyzer:
         limitations.append(
             "рыночная цена и доступность объявления не проверяются: торговых интеграций нет"
         )
+        unknown_caps = sorted(change.element for change in resistances if change.cap_basis is None)
+        if unknown_caps:
+            limitations.append(
+                "кап сопротивления неизвестен для стихий "
+                + ", ".join(unknown_caps)
+                + ": значения выше 75% без движка не переводятся в итог, пока в профиле "
+                "нет измеренного calculated.resistance_baseline.maximum"
+            )
         return limitations
 
     @staticmethod
@@ -930,9 +1080,10 @@ class GearAnalyzer:
             if delta_uncapped is None or delta_capped is None:
                 continue
             if abs(delta_uncapped) > 1e-9 and abs(delta_capped) < 1e-9:
+                cap = f"{change.before_cap:g}%" if change.before_cap is not None else "неизвестен"
                 warnings.append(
                     f"{change.element}: изменение {delta_uncapped:+g}% не влияет на итог — "
-                    "сопротивление уже на капе"
+                    f"сопротивление уже на капе (кап {cap})"
                 )
             elif delta_capped < -1e-9:
                 warnings.append(
@@ -944,6 +1095,43 @@ class GearAnalyzer:
 
 def _as_float(value: Any) -> float | None:
     return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def _declared_max_deltas(candidate: Item, current_item: Item | None) -> dict[str, float]:
+    """На сколько предметы меняют кап сопротивления каждого элемента."""
+    old = current_item.declared if current_item else None
+    new = candidate.declared
+    result: dict[str, float] = {}
+    for element, stat_key in stats.MAX_RESISTANCES.items():
+        before = (old.value(stat_key) if old else 0.0) or 0.0
+        after = new.value(stat_key) or 0.0
+        if abs(after - before) > 1e-9:
+            result[element] = after - before
+    return result
+
+
+def _resolve_cap(
+    total: float | None, capped: float | None, fallback: float | None
+) -> tuple[float | None, str | None]:
+    """Предел сопротивления из насыщения движка, иначе из измеренного профиля.
+
+    Насыщение — единственный случай, когда движок прямо показывает кап: если
+    `*Resist` меньше `*ResistTotal`, разница — избыток сверх капа, значит
+    `*Resist` ровно равен капу.
+    """
+    if total is not None and capped is not None and total - capped > 1e-9:
+        return capped, BASIS_ENGINE
+    if fallback is not None:
+        return float(fallback), BASIS_BASELINE
+    return None, None
+
+
+def _pick_cap_basis(before: str | None, after: str | None) -> str | None:
+    """Самое сильное свидетельство о капе: движок > модификатор > профиль."""
+    for basis in (BASIS_ENGINE, BASIS_DECLARED, BASIS_BASELINE):
+        if basis in (before, after):
+            return basis
+    return before or after
 
 
 def _dedupe(values: list[str]) -> list[str]:

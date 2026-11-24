@@ -80,6 +80,29 @@ _PATTERNS: tuple[tuple[re.Pattern[str], object], ...] = (
         re.compile(rf"^{NUMBER}% to all Elemental Resistances$"),
         _multi(*stats.EXPANSIONS["all_elemental_resistance"]),
     ),
+    # Максимум сопротивления: повышает кап, до которого работает сопротивление.
+    # Без движка или профиля абсолютный кап неизвестен, поэтому величина
+    # учитывается только как «объявленное изменение капа» и не входит в балл.
+    (
+        re.compile(rf"^{NUMBER}% to maximum Fire Resistance$"),
+        _single(stats.MAX_RESISTANCES["fire"]),
+    ),
+    (
+        re.compile(rf"^{NUMBER}% to maximum Cold Resistance$"),
+        _single(stats.MAX_RESISTANCES["cold"]),
+    ),
+    (
+        re.compile(rf"^{NUMBER}% to maximum Lightning Resistance$"),
+        _single(stats.MAX_RESISTANCES["lightning"]),
+    ),
+    (
+        re.compile(rf"^{NUMBER}% to maximum Chaos Resistance$"),
+        _single(stats.MAX_RESISTANCES["chaos"]),
+    ),
+    (
+        re.compile(rf"^{NUMBER}% to all maximum Elemental Resistances$"),
+        _multi(*(stats.MAX_RESISTANCES[element] for element in ("fire", "cold", "lightning"))),
+    ),
     (re.compile(rf"^{NUMBER}% increased Movement Speed$"), _single("movement_speed")),
     (re.compile(rf"^{NUMBER}% increased maximum Life$"), _single("life_percent")),
     (re.compile(rf"^{NUMBER}% increased maximum Mana$"), _single("mana_percent")),

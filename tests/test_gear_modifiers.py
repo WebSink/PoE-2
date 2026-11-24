@@ -41,6 +41,25 @@ def test_parse_mod_expands_all_elemental_resistances():
     assert {key for key, _ in mod.effects} == set(EXPANSIONS["all_elemental_resistance"])
 
 
+def test_parse_mod_reads_maximum_resistance_as_cap_change():
+    """+N% to maximum ... Resistance меняет кап, а не запас сопротивления."""
+    mod = parse_mod("+2% to maximum Lightning Resistance")
+
+    assert mod.status == "resolved"
+    assert mod.effects == (("max_lightning_resistance", 2.0),)
+    assert "lightning_resistance" not in mod.stats
+
+
+def test_parse_mod_expands_all_maximum_elemental_resistances():
+    mod = parse_mod("+1% to all maximum Elemental Resistances")
+
+    assert {key for key, _ in mod.effects} == {
+        "max_fire_resistance",
+        "max_cold_resistance",
+        "max_lightning_resistance",
+    }
+
+
 def test_parse_mod_handles_reduced_as_negative():
     mod = parse_mod("10% reduced Movement Speed")
 

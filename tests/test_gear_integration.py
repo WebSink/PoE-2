@@ -267,3 +267,33 @@ def test_real_sinkov_boots_candidate_in_declared_mode(real_context):
     assert report.requirements.equippable is None
     assert any("нельзя достоверно воспроизвести" in item for item in report.limitations)
     assert report.integrity.unchanged is True
+
+
+@requires_engine
+@requires_build
+def test_swap_that_lowers_attributes_blocks_the_rating(real_context):
+    """Реальный движок: -50 ловкости ломает требование 65 у другого предмета."""
+    report = GearAnalyzer().analyze(
+        build_path=BUILD_PATH,
+        candidate=parse_item_text(
+            """Rarity: RARE
+Cursed Boots
+Silk Slippers
+LevelReq: 36
+-50 to Dexterity
++20 to maximum Life
+""",
+            slot="Boots",
+        ),
+        slot="Boots",
+        context=real_context,
+    )
+
+    assert report.engine.status == ENGINE_STATUS_OK
+    dexterity = next(check for check in report.cascade.checks if check.kind == "cascade_dexterity")
+    assert dexterity.status == "not_satisfied"
+    assert dexterity.actual == pytest.approx(47.0)  # 97 - 50, а не 97
+    assert dexterity.required == pytest.approx(65.0)
+    assert [check.kind for check in report.cascade.blocking] == ["cascade_dexterity"]
+    assert report.rating.verdict == "requirements_broken"
+    assert any("ломает требования" in warning for warning in report.warnings)

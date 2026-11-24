@@ -407,3 +407,295 @@ def test_explicit_engine_path_is_not_silently_replaced(analyze, boots_text):
 
     assert report.engine.status == ENGINE_STATUS_UNAVAILABLE
     assert "nope-pob-mcp.exe" in (report.engine.error or "")
+
+
+# =========================================================================== #
+# Независимый review S5.1.1: подтверждённые дефекты и их регрессии
+# =========================================================================== #
+
+from dataclasses import replace  # noqa: E402
+
+from fake_engine import DEFAULT_BASE_STATS  # noqa: E402
+
+
+def _stats_with(**overrides):
+    stats = dict(DEFAULT_BASE_STATS)
+    stats.update(overrides)
+    return stats
+
+
+# --------------------------------------------------------------------------- #
+# 1. Атрибуты: снимаемая вещь перестаёт действовать
+# --------------------------------------------------------------------------- #
+
+
+def test_swap_that_removes_attributes_breaks_cascade(analyze, fake_engine):
+    """100 Dex = 70 своих + 30 от снимаемых сапог; другому предмету нужно 90."""
+    engine = fake_engine(
+        base_stats=_stats_with(Dex=100.0, ReqDex=90.0),
+        current_item_effects={"Dex": 30.0},
+        effects={"No Dex Boots": {"Life": 20.0}},
+    )
+    text = """Rarity: RARE
+No Dex Boots
+Silk Slippers
+LevelReq: 36
++20 to maximum Life
+"""
+    report = analyze(text, engine=engine)
+
+    assert report.engine.status == ENGINE_STATUS_OK
+    assert engine.get_stats(["Dex"])["Dex"] == pytest.approx(70.0)
+
+    cascade = next(check for check in report.cascade.checks if check.kind == "cascade_dexterity")
+    assert cascade.status == "not_satisfied"
+    assert cascade.actual == pytest.approx(70.0)
+    assert cascade.required == pytest.approx(90.0)
+    assert [check.kind for check in report.cascade.blocking] == ["cascade_dexterity"]
+    assert report.rating.verdict == "requirements_broken"
+
+
+def test_candidate_own_requirement_is_not_helped_by_removed_item(analyze, fake_engine):
+    """Кандидат требует 80 Dex, но после снятия старой вещи остаётся 70."""
+    engine = fake_engine(
+        base_stats=_stats_with(Dex=100.0, ReqDex=65.0),
+        current_item_effects={"Dex": 30.0},
+        effects={"Dex Boots": {"Life": 20.0}},
+    )
+    text = """Rarity: RARE
+Dex Boots
+Silk Slippers
+LevelReq: 36
+Requires: Level 36, 80 Dex
++20 to maximum Life
+"""
+    report = analyze(text, engine=engine)
+
+    dexterity = next(check for check in report.requirements.checks if check.kind == "dexterity")
+    assert dexterity.status == "not_satisfied"
+    assert dexterity.actual == pytest.approx(70.0)
+    assert dexterity.required == pytest.approx(80.0)
+    assert report.requirements.equippable is False
+    assert report.rating.verdict == "not_equippable"
+
+
+# --------------------------------------------------------------------------- #
+# 2. Блокирующий каскад не даёт вердикт «улучшение»
+# --------------------------------------------------------------------------- #
+
+
+def test_big_gain_does_not_become_upgrade_when_cascade_breaks(analyze, fake_engine):
+    engine = fake_engine(
+        base_stats=_stats_with(Dex=100.0, ReqDex=90.0),
+        current_item_effects={"Dex": 30.0},
+        effects={"Big Life Boots": {"Life": 300.0}},
+    )
+    text = """Rarity: RARE
+Big Life Boots
+Silk Slippers
+LevelReq: 36
++300 to maximum Life
+"""
+    report = analyze(text, engine=engine)
+
+    assert report.rating.score > 3.0
+    assert report.rating.verdict == "requirements_broken"
+    assert report.rating.provisional_verdict is None
+    assert any("ломает требования" in warning for warning in report.warnings)
+
+
+# --------------------------------------------------------------------------- #
+# 3. Потеря локальной защиты предмета
+# --------------------------------------------------------------------------- #
+
+
+def test_lost_local_energy_shield_is_reported(analyze):
+    text = """Rarity: RARE
+Plated Striders
+Silk Slippers
+LevelReq: 36
+Armour: 115
++30 to maximum Life
+"""
+    report = analyze(text, use_engine=False)
+
+    # 79 локального ES текущих сапог исчезает вместе с ними
+    assert report.lost_defences["energy_shield"] == pytest.approx(79.0)
+    assert report.gained_defences["armour"] == pytest.approx(115.0)
+    # локальная защита не смешивается с глобальными модификаторами
+    assert "energy_shield" not in report.gained_defences
+    assert "armour" not in report.lost_defences
+    # список защит кандидата полный (текст предмета): потерю можно утверждать
+    assert not any("не указана защита" in item for item in report.limitations)
+
+
+def test_absence_of_defence_in_json_is_unknown_not_zero(analyze):
+    item = parse_item_json(
+        {
+            "name": "Manual Boots",
+            "slot": "Boots",
+            "required_level": 36,
+            "defences": {"armour": 115},
+            "mods": [{"text": "+30 to maximum Life"}],
+        }
+    )
+    report = GearAnalyzer().analyze(
+        build_path=_fixture_build(),
+        candidate=item,
+        slot="Boots",
+        context=_context(),
+        use_engine=False,
+    )
+
+    # ES не указан: это «неизвестно», а не «ноль», потерю 79 не приписываем
+    assert "energy_shield" not in report.lost_defences
+    assert report.gained_defences["armour"] == pytest.approx(115.0)
+    assert any("не указана защита предмета energy_shield" in item for item in report.limitations)
+
+
+# --------------------------------------------------------------------------- #
+# 4. Максимум сопротивления
+# --------------------------------------------------------------------------- #
+
+
+def test_projection_uses_measured_maximum(analyze):
+    plain = """Rarity: RARE
+Storm Boots
+Silk Slippers
+LevelReq: 36
++60% to Lightning Resistance
++20 to maximum Life
+"""
+    capped = plain.replace(
+        "+60% to Lightning Resistance",
+        "+60% to Lightning Resistance\n+2% to maximum Lightning Resistance",
+    )
+
+    without = analyze(plain, use_engine=False)
+    with_max = analyze(capped, use_engine=False)
+
+    plain_lightning = next(c for c in without.resistances if c.element == "lightning")
+    max_lightning = next(c for c in with_max.resistances if c.element == "lightning")
+
+    assert plain_lightning.after_cap == pytest.approx(75.0)
+    assert plain_lightning.delta_capped == pytest.approx(40.0)
+
+    assert max_lightning.before_cap == pytest.approx(75.0)
+    assert max_lightning.after_cap == pytest.approx(77.0)
+    assert max_lightning.cap_basis == "declared"
+    assert max_lightning.delta_capped == pytest.approx(42.0)
+
+
+def test_projection_marks_cap_unknown_without_measured_maximum(analyze, context):
+    without_maximum = replace(
+        context, resistance_baseline=replace(context.resistance_baseline, maximum=None)
+    )
+    item = parse_item_text(
+        """Rarity: RARE
+Storm Boots
+Silk Slippers
+LevelReq: 36
++60% to Lightning Resistance
+""",
+        slot="Boots",
+    )
+
+    report = GearAnalyzer().analyze(
+        build_path=_fixture_build(),
+        candidate=item,
+        slot="Boots",
+        context=without_maximum,
+        use_engine=False,
+    )
+
+    lightning = next(c for c in report.resistances if c.element == "lightning")
+    assert lightning.after_capped is None
+    assert lightning.delta_capped is None
+    assert lightning.cap_basis is None
+    # неизвестное сопротивление не выпадает из оценки молча
+    assert "lightning_resistance" in report.rating.missing
+    assert report.rating.verdict == "inconclusive"
+    assert any("кап сопротивления неизвестен" in item for item in report.limitations)
+
+
+def test_engine_limit_is_derived_from_saturation(analyze, fake_engine):
+    engine = fake_engine(
+        base_stats=_stats_with(LightningResist=35.0, LightningResistTotal=35.0),
+        resist_cap=77.0,
+        effects={"Max Res Boots": {"Life": 10.0}},
+    )
+    text = """Rarity: RARE
+Max Res Boots
+Silk Slippers
+LevelReq: 36
++150% to Lightning Resistance
++2% to maximum Lightning Resistance
++10 to maximum Life
+"""
+    report = analyze(text, engine=engine)
+
+    lightning = next(c for c in report.resistances if c.element == "lightning")
+    assert lightning.before_uncapped == pytest.approx(35.0)
+    assert lightning.after_uncapped == pytest.approx(185.0)
+    assert lightning.after_capped == pytest.approx(77.0)
+    assert lightning.after_cap == pytest.approx(77.0)
+    assert lightning.cap_basis == "engine"
+
+
+def test_report_prints_actual_limit_instead_of_75(analyze, fake_engine, boots_text):
+    from poe2cc.gear import render_text
+
+    report = analyze(boots_text, engine=fake_engine())
+    text = render_text(report)
+
+    assert "кап сопротивления" in text
+    assert "75.0%" in text
+    assert "кап 75%" not in text
+
+
+# --------------------------------------------------------------------------- #
+# 5. Временная копия удаляется и при ошибке
+# --------------------------------------------------------------------------- #
+
+
+def test_unexpected_engine_exception_degrades_and_cleans_up(analyze, fake_engine, boots_text):
+    temp_root = Path(tempfile.gettempdir())
+    before = {path.name for path in temp_root.glob("poe2cc-gear-*")}
+
+    engine = fake_engine()
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("сломалось на equip")
+
+    engine.equip_item = boom
+    report = analyze(boots_text, engine=engine)
+
+    assert report.engine.status == ENGINE_STATUS_ERROR
+    assert "RuntimeError" in (report.engine.error or "")
+    assert report.integrity.temp_copy_used is True
+    assert report.integrity.temp_copy_removed is True
+    after = {path.name for path in temp_root.glob("poe2cc-gear-*")}
+    assert after == before
+
+
+def test_temp_copy_removed_is_false_when_directory_survives(
+    analyze, fake_engine, boots_text, monkeypatch
+):
+    """Флаг удаления выставляется только после подтверждённого отсутствия каталога."""
+    import shutil as shutil_module
+
+    real_rmtree = shutil_module.rmtree
+    leaked: list[Path] = []
+
+    def stubborn(path, *args, **kwargs):
+        leaked.append(Path(path))
+
+    monkeypatch.setattr(shutil_module, "rmtree", stubborn)
+    try:
+        report = analyze(boots_text, engine=fake_engine())
+        assert report.integrity.temp_copy_used is True
+        assert report.integrity.temp_copy_removed is False
+    finally:
+        monkeypatch.undo()
+        for path in leaked:
+            real_rmtree(path, ignore_errors=True)

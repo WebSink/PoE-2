@@ -209,6 +209,35 @@ def check_no_calculated_outside_scenarios(profile: dict) -> list[str]:
     return errors
 
 
+def _resistance_caps(baseline: dict) -> dict[str, float]:
+    """Предел сопротивления по стихиям: измеренный максимум или справочные 75%."""
+    maximum = baseline.get("maximum") or {}
+    return {element: float(maximum.get(element, RESIST_CAP)) for element in ELEMENTAL + ("chaos",)}
+
+
+def check_resistance_maximum(profile: dict) -> list[str]:
+    """Если кап сопротивления записан, он должен быть полным и с методом замера."""
+    errors: list[str] = []
+    baseline = profile.get("calculated", {}).get("resistance_baseline") or {}
+    maximum = baseline.get("maximum")
+    if maximum is None:
+        return []
+    for element in ELEMENTAL + ("chaos",):
+        value = maximum.get(element)
+        if value is None:
+            errors.append(f"calculated.resistance_baseline.maximum.{element}: отсутствует")
+        elif not isinstance(value, (int, float)) or value < RESIST_CAP:
+            errors.append(
+                f"calculated.resistance_baseline.maximum.{element}: {value!r} ниже базовых "
+                f"{RESIST_CAP:.0f}% — кап не может быть меньше базового без источника"
+            )
+    if not baseline.get("maximum_method"):
+        errors.append(
+            "calculated.resistance_baseline.maximum_method: не описан способ измерения капа"
+        )
+    return errors
+
+
 def check_resistances(profile: dict) -> list[str]:
     """Пересчитывает сопротивления каждого сценария из неcapped-значений."""
     errors = []
@@ -216,6 +245,7 @@ def check_resistances(profile: dict) -> list[str]:
     uncapped = baseline.get("uncapped")
     if not uncapped:
         return ["calculated.resistance_baseline.uncapped: отсутствует, сопротивления не проверить"]
+    caps = _resistance_caps(baseline)
 
     for sc in profile.get("calculated", {}).get("scenarios", []):
         sid = sc.get("id", "?")
@@ -229,18 +259,20 @@ def check_resistances(profile: dict) -> list[str]:
             if raw is None:
                 errors.append(f"calculated.resistance_baseline.uncapped.{element}: отсутствует")
                 continue
-            expected = min(raw + penalty, RESIST_CAP)
+            expected = min(raw + penalty, caps[element])
             actual = got.get(element)
             if actual is None:
                 errors.append(f"{sid}: нет сопротивления {element}")
             elif abs(expected - actual) > 0.5:
                 errors.append(
                     f"{sid}: {element} = {actual}, ожидалось {expected:.0f} "
-                    f"(uncapped {raw} + штраф {penalty}, кап {RESIST_CAP:.0f})"
+                    f"(uncapped {raw} + штраф {penalty}, кап {caps[element]:.0f})"
                 )
         chaos_expected = uncapped.get("chaos")
-        if chaos_expected is not None and abs(got.get("chaos", -999) - chaos_expected) > 0.5:
-            errors.append(f"{sid}: chaos = {got.get('chaos')}, ожидалось {chaos_expected}")
+        if chaos_expected is not None:
+            chaos_expected = min(chaos_expected, caps["chaos"])
+            if abs(got.get("chaos", -999) - chaos_expected) > 0.5:
+                errors.append(f"{sid}: chaos = {got.get('chaos')}, ожидалось {chaos_expected}")
     return errors
 
 
@@ -281,6 +313,7 @@ def check_resistance_baseline(profile: dict) -> list[str]:
         )
 
     uncapped = baseline.get("uncapped", {})
+    caps = _resistance_caps(baseline)
     scenarios = {sc.get("id"): sc for sc in profile.get("calculated", {}).get("scenarios", [])}
     penalties = []
     for i, row in enumerate(baseline.get("evidence", [])):
@@ -328,12 +361,12 @@ def check_resistance_baseline(profile: dict) -> list[str]:
                     )
                 got = scenario.get("defence", {}).get("resistances", {})
                 for element in ELEMENTAL + ("chaos",):
-                    expected = min(total.get(element, -999), RESIST_CAP)
+                    expected = min(total.get(element, -999), caps[element])
                     if abs(got.get(element, -999) - expected) > 0.5:
                         errors.append(
                             f"calculated.resistance_baseline.evidence[{i}]: сценарий {scenario_id!r} "
                             f"показывает {element} = {got.get(element)}, ожидалось {expected:.0f} "
-                            f"(total {total.get(element)} после капа {RESIST_CAP:.0f})"
+                            f"(total {total.get(element)} после капа {caps[element]:.0f})"
                         )
 
     reference = baseline.get("penalty_reference")
@@ -469,6 +502,7 @@ def validate_profile(path: Path, schema: dict) -> list[str]:
         check_provenance,
         check_no_calculated_outside_scenarios,
         check_resistance_baseline,
+        check_resistance_maximum,
         check_resistances,
         check_spirit,
         check_scenario_skills,

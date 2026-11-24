@@ -566,8 +566,15 @@
   "resistance_baseline": {
    "source_id": "pob2-engine-2026-11-21",
    "captured_at": "2026-11-21",
-   "method": "get_stats при resistancePenalty = 0: FireResistTotal = 109, ColdResistTotal = 66, LightningResistTotal = 55, ChaosResistTotal = 0. Поля *ResistTotal — сопротивление после штрафа акта и до капа 75%; при штрафах -20 и -60 они уменьшаются ровно на величину штрафа, что и подтверждает evidence.",
+   "method": "get_stats при resistancePenalty = 0: FireResistTotal = 109, ColdResistTotal = 66, LightningResistTotal = 55, ChaosResistTotal = 0. Поля *ResistTotal — сопротивление после штрафа акта и до предела; при штрафах -20 и -60 они уменьшаются ровно на величину штрафа, что и подтверждает evidence.",
    "penalty_reference": 0,
+   "maximum": {
+    "fire": 75,
+    "cold": 75,
+    "lightning": 75,
+    "chaos": 75
+   },
+   "maximum_method": "Измерено насыщением на временной копии билда: в слот Boots надет предмет с +500% ко всем четырём сопротивлениям, после чего FireResist/ColdResist/LightningResist/ChaosResist = 75. В этом состоянии поле *Resist равно пределу, потому что избыток срезан. Движок не отдаёт предел отдельным полем — это единственный прямой способ его получить. Исходный XML не изменялся (работа шла на копии).",
    "uncapped": {
     "fire": 109,
     "cold": 66,

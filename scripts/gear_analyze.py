@@ -21,7 +21,8 @@
 0 — отчёт построен (движком или только по объявленным свойствам);
 1 — ошибка входных данных;
 2 — движок недоступен или вернул ошибку расчёта;
-3 — предмет нельзя надеть по требованиям.
+3 — предмет нельзя надеть по требованиям;
+4 — надеть можно, но замена ломает требования других предметов или камней.
 """
 
 from __future__ import annotations
@@ -37,6 +38,7 @@ if str(ROOT) not in sys.path:
 from poe2cc.gear import (  # noqa: E402  (путь к пакету добавляется выше)
     ENGINE_STATUS_ERROR,
     ENGINE_STATUS_UNAVAILABLE,
+    VERDICT_REQUIREMENTS_BROKEN,
     AnalysisError,
     GearAnalyzer,
     ItemParseError,
@@ -126,6 +128,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if report.requirements.equippable is False:
         return 3
+    if report.rating.verdict == VERDICT_REQUIREMENTS_BROKEN:
+        return 4
     return 0
 
 

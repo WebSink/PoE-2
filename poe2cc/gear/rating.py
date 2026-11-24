@@ -22,6 +22,7 @@ VERDICT_UPGRADE = "upgrade"
 VERDICT_SIDEGRADE = "sidegrade"
 VERDICT_DOWNGRADE = "downgrade"
 VERDICT_NOT_EQUIPPABLE = "not_equippable"
+VERDICT_REQUIREMENTS_BROKEN = "requirements_broken"
 VERDICT_INCONCLUSIVE = "inconclusive"
 
 VERDICT_LABELS = {
@@ -29,6 +30,7 @@ VERDICT_LABELS = {
     VERDICT_SIDEGRADE: "примерно то же самое",
     VERDICT_DOWNGRADE: "ухудшение",
     VERDICT_NOT_EQUIPPABLE: "надеть нельзя",
+    VERDICT_REQUIREMENTS_BROKEN: "надеть можно, но замена ломает требования других предметов",
     VERDICT_INCONCLUSIVE: "недостаточно данных для вывода",
 }
 
@@ -107,6 +109,7 @@ def evaluate(
     ehp_delta_percent: float | None = None,
     dps_delta_percent: float | None = None,
     capped_resistances: dict[str, float] | None = None,
+    blocking_requirements: list[str] | None = None,
 ) -> Rating:
     """Считает оценку по изменениям характеристик.
 
@@ -114,6 +117,9 @@ def evaluate(
     `bases` — происхождение каждого числа: `engine` или `declared`.
     `capped_resistances` — изменения сопротивлений *после* капа: именно они
     влияют на выживаемость, поэтому в оценку идут они, а не «до капа».
+    `blocking_requirements` — причины, по которым замена ломает требования
+    других предметов или камней. Даже при большом балле такой предмет не может
+    получить вердикт «улучшение»: его нельзя носить вместе с остальной сборкой.
     """
     components: list[RatingComponent] = []
     resistance_keys = set(stats.RESISTANCES)
@@ -185,9 +191,12 @@ def evaluate(
 
     score = sum(component.contribution for component in components)
     partial = bool(missing)
+    blocked = bool(blocking_requirements)
 
     if equippable is False:
         verdict = VERDICT_NOT_EQUIPPABLE
+    elif blocked:
+        verdict = VERDICT_REQUIREMENTS_BROKEN
     elif partial:
         verdict = VERDICT_INCONCLUSIVE
     else:
@@ -206,6 +215,11 @@ def evaluate(
     explanation.append(
         f"итог: {score:.2f} при порогах ±{UPGRADE_THRESHOLD:g} -> {VERDICT_LABELS[verdict]}"
     )
+    if blocked and equippable is not False:
+        explanation.append(
+            "балл не превращается в «улучшение»: замена нарушает требования других "
+            "предметов или камней — " + "; ".join(blocking_requirements or [])
+        )
     if partial:
         explanation.append(
             "оценка неполная: без движка не посчитаны "
@@ -215,7 +229,9 @@ def evaluate(
     return Rating(
         score=score,
         verdict=verdict,
-        provisional_verdict=_verdict(score) if partial and equippable is not False else None,
+        provisional_verdict=(
+            _verdict(score) if partial and equippable is not False and not blocked else None
+        ),
         partial=partial,
         components=components,
         missing=list(missing),

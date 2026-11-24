@@ -10,6 +10,7 @@ from poe2cc.gear.requirements import (
     SATISFIED,
     UNKNOWN,
     attributes_after_swap,
+    attributes_without_slot_item,
     check_attribute_cascade,
     check_candidate,
 )
@@ -148,3 +149,92 @@ def test_report_as_dict_is_json_ready():
         "dexterity",
         "intelligence",
     }
+
+
+# --------------------------------------------------------------------------- #
+# Снятая вещь перестаёт действовать (review S5.1.1, пункт 1)
+# --------------------------------------------------------------------------- #
+
+
+def test_attributes_without_slot_item_removes_its_bonus():
+    old = _boots(mods=[{"stat": "dexterity", "value": 30}])
+
+    baseline = attributes_without_slot_item(SINKOV, old)
+
+    assert baseline["dexterity"] == pytest.approx(67.0)
+    assert baseline["strength"] == pytest.approx(67.0)
+    assert baseline["intelligence"] == pytest.approx(46.0)
+
+
+def test_attributes_without_slot_item_needs_no_item():
+    assert attributes_without_slot_item(SINKOV, None) == SINKOV
+
+
+def test_attributes_after_swap_removes_old_item_bonus():
+    old = _boots(mods=[{"stat": "dexterity", "value": 30}])
+    new = _boots(name="New Boots", mods=[{"text": "+20 to maximum Life"}])
+
+    after = attributes_after_swap(new, SINKOV, old)
+
+    assert after["dexterity"] == pytest.approx(67.0)
+
+
+def test_candidate_requirement_is_not_satisfied_by_removed_item_bonus():
+    """100 Dex включают +30 от снимаемых сапог: кандидату с ReqDex 80 не хватает 70."""
+    old = _boots(mods=[{"stat": "dexterity", "value": 30}])
+    candidate = _boots(
+        name="Dex Boots",
+        attribute_requirements={"strength": 0, "dexterity": 80, "intelligence": 0},
+    )
+    baseline = attributes_without_slot_item(
+        {"strength": 67.0, "dexterity": 100.0, "intelligence": 46.0}, old
+    )
+
+    report = check_candidate(candidate, 46, baseline)
+
+    dexterity = next(check for check in report.checks if check.kind == "dexterity")
+    assert dexterity.status == NOT_SATISFIED
+    assert dexterity.actual == pytest.approx(70.0)
+    assert dexterity.required == pytest.approx(80.0)
+    assert report.equippable is False
+
+
+def test_cascade_blocks_when_removed_item_provided_the_attribute():
+    """100 Dex = 70 своих + 30 от снимаемой вещи; другим предметам нужно 90."""
+    new = _boots(name="No Dex Boots", mods=[{"text": "+20 to maximum Life"}])
+    baseline = {"strength": 67.0, "dexterity": 100.0, "intelligence": 46.0}
+
+    report = check_attribute_cascade(
+        new,
+        baseline,
+        {"strength": 41.0, "dexterity": 90.0, "intelligence": 38.0},
+        attributes_after={"strength": 67.0, "dexterity": 70.0, "intelligence": 46.0},
+    )
+
+    dexterity = next(check for check in report.checks if check.kind == "cascade_dexterity")
+    assert dexterity.status == NOT_SATISFIED
+    assert dexterity.actual == pytest.approx(70.0)
+    assert [check.kind for check in report.blocking] == ["cascade_dexterity"]
+    assert any(
+        "атрибуты после замены: Сила 67, Ловкость 70, Интеллект 46" in note for note in report.notes
+    )
+
+
+def test_cascade_notes_when_aggregate_may_be_the_candidate_own_requirement():
+    candidate = _boots(attribute_requirements={"strength": 0, "dexterity": 90, "intelligence": 0})
+
+    report = check_attribute_cascade(
+        candidate,
+        SINKOV,
+        {"strength": 41.0, "dexterity": 90.0, "intelligence": 38.0},
+    )
+
+    assert any("требование самого кандидата" in note for note in report.notes)
+
+
+def test_declared_mode_cascade_is_marked_as_approximation():
+    report = check_attribute_cascade(
+        _boots(), SINKOV, {"strength": 1.0, "dexterity": 1.0, "intelligence": 1.0}
+    )
+
+    assert any("сложены из объявленных модификаторов" in note for note in report.notes)

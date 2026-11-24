@@ -46,7 +46,16 @@ from .items import (
     parse_item_text,
 )
 from .modifiers import ParsedMod, parse_mod
-from .rating import Rating, evaluate
+from .rating import (
+    VERDICT_DOWNGRADE,
+    VERDICT_INCONCLUSIVE,
+    VERDICT_NOT_EQUIPPABLE,
+    VERDICT_REQUIREMENTS_BROKEN,
+    VERDICT_SIDEGRADE,
+    VERDICT_UPGRADE,
+    Rating,
+    evaluate,
+)
 from .report import dumps_json, render_text, write_json
 from .requirements import RequirementReport, check_candidate
 from .scenario import ProfileContext, ProfileError, context_from_profile, load_context
@@ -71,6 +80,12 @@ __all__ = [
     "Rating",
     "RequirementReport",
     "StatDelta",
+    "VERDICT_DOWNGRADE",
+    "VERDICT_INCONCLUSIVE",
+    "VERDICT_NOT_EQUIPPABLE",
+    "VERDICT_REQUIREMENTS_BROKEN",
+    "VERDICT_SIDEGRADE",
+    "VERDICT_UPGRADE",
     "XmlIntegrity",
     "check_candidate",
     "context_from_profile",

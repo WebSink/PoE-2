@@ -15,7 +15,6 @@ from .analyzer import (
     ENGINE_STATUS_OK,
     ENGINE_STATUS_SKIPPED,
     ENGINE_STATUS_UNAVAILABLE,
-    RESIST_CAP,
     STATUS_COMPUTED,
     STATUS_ENGINE_REQUIRED,
     STATUS_UNKNOWN,
@@ -161,8 +160,11 @@ def render_text(report: AnalysisReport) -> str:
             f"{before_capped + ' -> ' + after_capped:>20}  "
             f"{_number(change.delta_capped, 'percent')}"
         )
+    lines.append("  кап сопротивления: " + _cap_summary(report))
     lines.append(
-        f"  кап {RESIST_CAP:.0f}%, штраф сценария {report.scenario.config.get('resistancePenalty')}"
+        "  штраф сценария: "
+        + str(report.scenario.config.get("resistancePenalty"))
+        + " (поле resistancePenalty из конфигурации сценария)"
     )
 
     if report.metrics:
@@ -237,6 +239,24 @@ def render_text(report: AnalysisReport) -> str:
         for message in report.engine.sanity:
             lines.append(f"  - {message}")
     return "\n".join(lines) + "\n"
+
+
+def _cap_summary(report: AnalysisReport) -> str:
+    """Предел сопротивления по стихиям: до -> после, или «не измерен»."""
+    parts: list[str] = []
+    for change in report.resistances:
+        if change.cap_basis is None:
+            parts.append(f"{change.element} неизвестен")
+            continue
+        before = _plain(change.before_cap, "percent")
+        after = _plain(change.after_cap, "percent")
+        if change.after_cap is not None and change.before_cap != change.after_cap:
+            parts.append(f"{change.element} {before} -> {after}")
+        else:
+            parts.append(f"{change.element} {before}")
+    if not parts:
+        return "нет данных"
+    return ", ".join(parts)
 
 
 def write_json(report: AnalysisReport, path: str | Path) -> Path:

@@ -62,6 +62,9 @@ class ResistanceBaseline:
     captured_at: str
     penalty_reference: float
     method: str | None = None
+    #: Измеренный кап сопротивления по стихиям; None — не измерен.
+    maximum: dict[str, float] | None = None
+    maximum_method: str | None = None
 
     def as_dict(self) -> dict:
         return {
@@ -70,6 +73,8 @@ class ResistanceBaseline:
             "captured_at": self.captured_at,
             "penalty_reference": self.penalty_reference,
             "method": self.method,
+            "maximum": dict(self.maximum) if self.maximum else None,
+            "maximum_method": self.maximum_method,
             "provenance": "calculated.resistance_baseline (выход движка, не импорт)",
         }
 
@@ -129,6 +134,12 @@ def context_from_profile(profile: dict, scenario_id: str | None = None) -> Profi
     baseline_payload = calculated.get("resistance_baseline")
     baseline: ResistanceBaseline | None = None
     if baseline_payload:
+        maximum_payload = baseline_payload.get("maximum") or {}
+        maximum = (
+            {element: float(value) for element, value in maximum_payload.items()}
+            if maximum_payload
+            else None
+        )
         baseline = ResistanceBaseline(
             uncapped={
                 element: float(value)
@@ -138,6 +149,8 @@ def context_from_profile(profile: dict, scenario_id: str | None = None) -> Profi
             captured_at=str(baseline_payload.get("captured_at") or ""),
             penalty_reference=float(baseline_payload.get("penalty_reference") or 0),
             method=baseline_payload.get("method"),
+            maximum=maximum,
+            maximum_method=baseline_payload.get("maximum_method"),
         )
 
     return ProfileContext(

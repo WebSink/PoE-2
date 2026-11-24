@@ -56,8 +56,11 @@ class FakeEngine:
         fail_on_equip: str | None = None,
         info: EngineInfo | None = None,
         current_item_text: str | None = CURRENT_BOOTS_TEXT,
+        current_item_effects: dict[str, float] | None = None,
+        resist_cap: float = 75.0,
     ) -> None:
         self.base_stats = dict(base_stats or DEFAULT_BASE_STATS)
+        self.resist_cap = float(resist_cap)
         self.effects = effects or {}
         self.unavailable = unavailable
         self.fail_on_equip = fail_on_equip
@@ -75,6 +78,7 @@ class FakeEngine:
         self._current = dict(self.base_stats)
         self._config: dict[str, Any] = {}
         self.current_item_text = current_item_text
+        self.current_item_effects = dict(current_item_effects or {})
         self._slot_resistances = resistances_of(current_item_text or "")
 
     # -- жизненный цикл ----------------------------------------------------- #
@@ -124,6 +128,10 @@ class FakeEngine:
             )
         self.equipped.append((item_text, slot))
         name = _item_name(item_text)
+        # снимаемая вещь перестаёт действовать: её вклад вычитается до надевания новой
+        for field, delta in self.current_item_effects.items():
+            self._current[field] = self._current.get(field, 0.0) - delta
+        self.current_item_effects = {}
         for field, delta in self.effects.get(name, {}).items():
             self._current[field] = self._current.get(field, 0.0) + delta
         self._apply_resistances(item_text)
@@ -147,7 +155,7 @@ class FakeEngine:
                 continue
             total = float(self._current.get(total_field, 0.0)) + delta
             self._current[total_field] = total
-            self._current[capped_field] = min(total, 75.0)
+            self._current[capped_field] = min(total, self.resist_cap)
         self._slot_resistances = new
 
     def _recompute_derived(self) -> None:

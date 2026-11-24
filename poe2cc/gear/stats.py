@@ -74,6 +74,40 @@ _STATS = (
         material=True,
         weight=0.6,
     ),
+    # Максимумы сопротивлений не дают выживаемости сами по себе: их эффект уже
+    # учтён в изменении сопротивления после капа, поэтому вес 0 (иначе задвоение).
+    StatMeta(
+        "max_fire_resistance",
+        "Максимум сопротивления огню",
+        "percent",
+        additive=True,
+        material=False,
+        weight=0.0,
+    ),
+    StatMeta(
+        "max_cold_resistance",
+        "Максимум сопротивления холоду",
+        "percent",
+        additive=True,
+        material=False,
+        weight=0.0,
+    ),
+    StatMeta(
+        "max_lightning_resistance",
+        "Максимум сопротивления молнии",
+        "percent",
+        additive=True,
+        material=False,
+        weight=0.0,
+    ),
+    StatMeta(
+        "max_chaos_resistance",
+        "Максимум сопротивления хаосу",
+        "percent",
+        additive=True,
+        material=False,
+        weight=0.0,
+    ),
     StatMeta("life_percent", "Здоровье (%)", "percent", additive=False, material=False),
     StatMeta("mana_percent", "Мана (%)", "percent", additive=False, material=False),
     StatMeta(
@@ -93,6 +127,14 @@ EXPANSIONS: dict[str, tuple[str, ...]] = {
 
 ELEMENTAL_RESISTANCES = ("fire_resistance", "cold_resistance", "lightning_resistance")
 RESISTANCES = ELEMENTAL_RESISTANCES + ("chaos_resistance",)
+
+#: Ключи модификаторов «+N% to maximum ... Resistance»: они меняют кап, а не запас.
+MAX_RESISTANCES: dict[str, str] = {
+    "fire": "max_fire_resistance",
+    "cold": "max_cold_resistance",
+    "lightning": "max_lightning_resistance",
+    "chaos": "max_chaos_resistance",
+}
 
 #: Соответствие ключей характеристик полям `get_stats` движка.
 ENGINE_FIELDS: dict[str, str] = {

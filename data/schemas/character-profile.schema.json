@@ -228,7 +228,7 @@
         },
         "resistance_baseline": {
           "type": "object",
-          "description": "Сопротивления до штрафа акта и до капа. Это выход движка, а НЕ данные импорта из аккаунта: клиент и движок показывают только значение после штрафа и капа, поэтому «до штрафа» восстанавливается из измерений при разных resistancePenalty.",
+          "description": "Сопротивления до штрафа акта и предел, до которого они работают. Это выход движка, а НЕ данные импорта из аккаунта: клиент и движок показывают только значение после штрафа и предела, поэтому «до штрафа» восстанавливается из измерений при разных resistancePenalty.",
           "required": ["source_id", "captured_at", "method", "penalty_reference", "uncapped", "evidence"],
           "additionalProperties": false,
           "properties": {
@@ -241,6 +241,23 @@
             "penalty_reference": {
               "type": "number",
               "description": "Штраф, при котором uncapped равно измеренному итогу (обычно 0)."
+            },
+            "maximum": {
+              "type": "object",
+              "description": "Измеренный предел сопротивления по стихиям. Движок не отдаёт его отдельным полем: он получен насыщением (+500% ко всем сопротивлениям на временной копии билда), где *Resist равно пределу. Если блок отсутствует, анализатор считает предел неизвестным и не подставляет 75% молча.",
+              "required": ["fire", "cold", "lightning", "chaos"],
+              "additionalProperties": false,
+              "properties": {
+                "fire": { "type": "number", "minimum": 75 },
+                "cold": { "type": "number", "minimum": 75 },
+                "lightning": { "type": "number", "minimum": 75 },
+                "chaos": { "type": "number", "minimum": 75 }
+              }
+            },
+            "maximum_method": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Как измерен предел: обязателен, если есть maximum."
             },
             "uncapped": {
               "type": "object",

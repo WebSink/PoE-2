@@ -124,6 +124,10 @@ class Item:
     item_level: float | None = None
     quality: float | None = None
     defences: dict[str, float] = field(default_factory=dict)
+    #: True — в источнике перечислены все локальные защиты предмета, поэтому
+    #: отсутствие ключа означает ноль, а не «неизвестно». Для текста из игры
+    #: и XML это так по определению; в JSON полноту надо подтвердить явно.
+    defences_complete: bool = False
     attribute_requirements: dict[str, float] = field(
         default_factory=lambda: {"strength": None, "dexterity": None, "intelligence": None}
     )
@@ -199,6 +203,7 @@ class Item:
             "item_level": self.item_level,
             "quality": self.quality,
             "defences": dict(self.defences),
+            "defences_complete": self.defences_complete,
             "attribute_requirements": dict(self.attribute_requirements),
             "runes": list(self.runes),
             "source_format": self.source_format,
@@ -352,6 +357,7 @@ def parse_item_text(text: str, slot: str | None = None) -> Item:
         item_level=item_level,
         quality=quality,
         defences=defences,
+        defences_complete=True,
         attribute_requirements=requirements,
         mods=mods,
         runes=runes,
@@ -452,6 +458,7 @@ def parse_item_json(data: dict | str | Path) -> Item:
         item_level=_maybe_float(payload.get("item_level")),
         quality=_maybe_float(payload.get("quality")),
         defences=defences,
+        defences_complete=bool(payload.get("defences_complete", False)),
         attribute_requirements=attribute_requirements,
         mods=mods,
         declared_totals=declared_totals,

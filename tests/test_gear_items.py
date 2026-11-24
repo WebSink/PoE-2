@@ -158,3 +158,43 @@ def test_items_from_xml_reads_active_item_set(fixture_build):
 def test_items_from_xml_rejects_broken_xml():
     with pytest.raises(ItemParseError, match="XML"):
         items_from_xml("<PathOfBuilding2><Items>")
+
+
+# --------------------------------------------------------------------------- #
+# Полнота списка локальной защиты (review S5.1.1, пункт 3)
+# --------------------------------------------------------------------------- #
+
+
+def test_text_item_defences_are_complete(boots_text):
+    """В тексте из игры перечислены все защиты: отсутствие строки = ноль."""
+    item = parse_item_text(boots_text)
+
+    assert item.defences_complete is True
+    assert item.defences == {"energy_shield": 79.0}
+    assert item.as_dict()["defences_complete"] is True
+
+
+def test_json_item_defences_are_incomplete_by_default():
+    item = parse_item_json({"name": "Manual", "mods": [{"text": "+10 to maximum Life"}]})
+
+    assert item.defences_complete is False
+
+
+def test_json_item_can_declare_defences_complete():
+    item = parse_item_json(
+        {
+            "name": "Manual",
+            "mods": [{"text": "+10 to maximum Life"}],
+            "defences": {"armour": 115},
+            "defences_complete": True,
+        }
+    )
+
+    assert item.defences_complete is True
+    assert item.defences == {"armour": 115.0}
+
+
+def test_xml_item_defences_are_complete(fixture_build):
+    items = items_from_xml(fixture_build.read_text(encoding="utf-8"))
+
+    assert items["Boots"].defences_complete is True

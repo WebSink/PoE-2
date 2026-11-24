@@ -28,6 +28,8 @@ _ATTRIBUTE_LABELS = {
     "intelligence": "Интеллект",
 }
 
+ATTRIBUTES = ("strength", "dexterity", "intelligence")
+
 
 @dataclass
 class RequirementCheck:
@@ -124,8 +126,10 @@ def check_candidate(
 ) -> RequirementReport:
     """Проверяет требования самого кандидата.
 
-    `attributes` — атрибуты персонажа *до* замены и без собственных бонусов
-    кандидата: предмет не может удовлетворять свои же требования.
+    `attributes` — атрибуты персонажа *без* заменяемого предмета и без
+    собственных бонусов кандидата: предмет не может удовлетворять свои же
+    требования, а снимаемая вещь перестаёт действовать (см.
+    `attributes_without_slot_item`).
     """
     report = RequirementReport()
     report.checks.append(
@@ -152,13 +156,34 @@ def check_candidate(
     return report
 
 
-def attributes_after_swap(item: Item, attributes: dict[str, float]) -> dict[str, float]:
-    """Атрибуты персонажа после замены: собственные бонусы кандидата теперь считаются."""
+def attributes_without_slot_item(
+    attributes: dict[str, float], item: Item | None
+) -> dict[str, float]:
+    """Атрибуты персонажа, если снять предмет из заменяемого слота.
+
+    Это приближение: вычитается только объявленный плоский бонус предмета.
+    Процентные и условные источники атрибутов так не отнять — поэтому в режиме
+    без движка результат помечается как объявленный, а не как измеренный.
+    """
     result = dict(attributes)
-    for kind in ("strength", "dexterity", "intelligence"):
+    if item is None:
+        return result
+    for kind in ATTRIBUTES:
         delta = item.declared.additive_value(kind)
         if delta:
-            result[kind] = result.get(kind, 0) + delta
+            result[kind] = result.get(kind, 0.0) - delta
+    return result
+
+
+def attributes_after_swap(
+    item: Item, attributes: dict[str, float], removed: Item | None = None
+) -> dict[str, float]:
+    """Атрибуты персонажа после замены: снимаемая вещь уходит, кандидат приходит."""
+    result = attributes_without_slot_item(attributes, removed)
+    for kind in ATTRIBUTES:
+        delta = item.declared.additive_value(kind)
+        if delta:
+            result[kind] = result.get(kind, 0.0) + delta
     return result
 
 
@@ -167,21 +192,28 @@ def check_attribute_cascade(
     attributes: dict[str, float],
     aggregate_requirements: dict[str, float] | None,
     attributes_after: dict[str, float] | None = None,
+    removed: Item | None = None,
 ) -> RequirementReport:
-    """Проверяет, не сломает ли замена требования других предметов и камней."""
+    """Проверяет, не сломает ли замена требования других предметов и камней.
+
+    `attributes` — атрибуты *без* снимаемой вещи (база для сравнения),
+    `attributes_after` — фактические атрибуты после замены (лучше всего — из
+    `stats_after` движка). Без движка доступна только объявленная часть, поэтому
+    проверка опирается на сумму модификаторов и помечается как приближение.
+    """
     report = RequirementReport()
-    after = dict(attributes_after) if attributes_after else attributes_after_swap(item, attributes)
-    deltas = {
-        kind: after[kind] - attributes.get(kind, 0)
-        for kind in ("strength", "dexterity", "intelligence")
-        if abs(after.get(kind, 0) - attributes.get(kind, 0)) > 1e-9
-    }
-    if deltas:
+    after = (
+        dict(attributes_after)
+        if attributes_after is not None
+        else attributes_after_swap(item, attributes, removed)
+    )
+    if after != {kind: attributes.get(kind, 0.0) for kind in ATTRIBUTES}:
+        # абсолютные значения однозначны для любого источника базы
+        report.notes.append("атрибуты после замены: " + attribute_summary(after))
+    if attributes_after is None:
         report.notes.append(
-            "замена меняет атрибуты: "
-            + ", ".join(
-                f"{_ATTRIBUTE_LABELS[kind]} {delta:+g}" for kind, delta in sorted(deltas.items())
-            )
+            "атрибуты после замены сложены из объявленных модификаторов: проценты "
+            "и условные источники так не учитываются, нужен движок для точного числа"
         )
 
     if aggregate_requirements is None:
@@ -189,7 +221,7 @@ def check_attribute_cascade(
             "агрегированные требования предметов и камней (ReqStr/ReqDex/ReqInt) известны "
             "только движку: каскад атрибутов не проверен"
         )
-        for kind in ("strength", "dexterity", "intelligence"):
+        for kind in ATTRIBUTES:
             report.checks.append(
                 RequirementCheck(
                     kind=f"cascade_{kind}",
@@ -202,7 +234,7 @@ def check_attribute_cascade(
             )
         return report
 
-    for kind in ("strength", "dexterity", "intelligence"):
+    for kind in ATTRIBUTES:
         required = aggregate_requirements.get(kind)
         report.checks.append(
             _compare(
@@ -210,9 +242,10 @@ def check_attribute_cascade(
                 f"{_ATTRIBUTE_LABELS[kind]} (другие предметы и камни)",
                 required,
                 after.get(kind),
-                "ReqStr/ReqDex/ReqInt движка",
+                "ReqStr/ReqDex/ReqInt движка после замены",
             )
         )
+    _note_overlap_with_candidate(report, item, aggregate_requirements)
     if not report.blocking:
         report.notes.append(
             "каскад атрибутов проверен: требования других предметов и камней выполняются"
@@ -220,8 +253,33 @@ def check_attribute_cascade(
     return report
 
 
+def _note_overlap_with_candidate(
+    report: RequirementReport, item: Item, aggregate_requirements: dict[str, float]
+) -> None:
+    """Предупреждает, что ReqX движка может быть требованием самого кандидата.
+
+    Движок отдаёт максимум по всем надетым предметам и камням и не различает,
+    чьё именно требование главное. Если объявленное требование кандидата не
+    меньше агрегированного, списать возможное нарушение только на «другие
+    предметы» нельзя.
+    """
+    overlaps: list[str] = []
+    for kind in ATTRIBUTES:
+        own = item.attribute_requirements.get(kind)
+        aggregate = aggregate_requirements.get(kind)
+        if own is None or aggregate is None:
+            continue
+        if own + 1e-9 >= aggregate:
+            overlaps.append(f"{_ATTRIBUTE_LABELS[kind]} {own:g}")
+    if overlaps:
+        report.notes.append(
+            "агрегированные ReqStr/ReqDex/ReqInt включают требование самого кандидата ("
+            + ", ".join(overlaps)
+            + "): движок берёт максимум по всем предметам и камням и не различает источники"
+        )
+
+
 def attribute_summary(attributes: dict[str, float]) -> str:
     return ", ".join(
-        f"{_ATTRIBUTE_LABELS[kind]} {attributes.get(kind, 0):g}"
-        for kind in ("strength", "dexterity", "intelligence")
+        f"{_ATTRIBUTE_LABELS[kind]} {attributes.get(kind, 0):g}" for kind in ATTRIBUTES
     )
