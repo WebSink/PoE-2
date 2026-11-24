@@ -58,9 +58,12 @@ class FakeEngine:
         current_item_text: str | None = CURRENT_BOOTS_TEXT,
         current_item_effects: dict[str, float] | None = None,
         resist_cap: float = 75.0,
+        max_res_effects: dict[str, dict[str, float]] | None = None,
     ) -> None:
         self.base_stats = dict(base_stats or DEFAULT_BASE_STATS)
         self.resist_cap = float(resist_cap)
+        #: как предмет меняет максимум сопротивления (element -> delta)
+        self.max_res_effects = max_res_effects or {}
         self.effects = effects or {}
         self.unavailable = unavailable
         self.fail_on_equip = fail_on_equip
@@ -73,6 +76,7 @@ class FakeEngine:
         self.config_calls: list[tuple[str, Any]] = []
         self.loaded_build: str | None = None
         self.equipped: list[tuple[str, str | None]] = []
+        self.unequipped: list[str] = []
         self.closed = False
         self.started = False
         self._current = dict(self.base_stats)
@@ -80,6 +84,7 @@ class FakeEngine:
         self.current_item_text = current_item_text
         self.current_item_effects = dict(current_item_effects or {})
         self._slot_resistances = resistances_of(current_item_text or "")
+        self._applied_max: dict[str, float] = {}
 
     # -- жизненный цикл ----------------------------------------------------- #
     def start(self) -> None:
@@ -95,6 +100,10 @@ class FakeEngine:
         self.loaded_build = source
         self._current = dict(self.base_stats)
         self._slot_resistances = resistances_of(self.current_item_text or "")
+        # базовое состояние «до замены» уже включает максимум текущей вещи
+        self._applied_max = dict(
+            self.max_res_effects.get(_item_name(self.current_item_text or ""), {})
+        )
         return {"loaded": True}
 
     def set_config(self, var: str, value: Any) -> None:
@@ -134,12 +143,26 @@ class FakeEngine:
         self.current_item_effects = {}
         for field, delta in self.effects.get(name, {}).items():
             self._current[field] = self._current.get(field, 0.0) + delta
+        self._applied_max = dict(self.max_res_effects.get(name, {}))
         self._apply_resistances(item_text)
         self._recompute_derived()
         return {"slot": slot, "itemName": name}
 
     def unequip_item(self, slot: str) -> dict:
-        self._current = dict(self.base_stats)
+        """Снимает предмет слота: его бонусы и сопротивления перестают действовать."""
+        self.unequipped.append(slot)
+        for field, delta in self.current_item_effects.items():
+            self._current[field] = self._current.get(field, 0.0) - delta
+        self.current_item_effects = {}
+        for element, (_capped_field, total_field) in _RESIST_FIELDS.items():
+            delta = -self._slot_resistances.get(element, 0.0)
+            if not delta:
+                continue
+            self._current[total_field] = float(self._current.get(total_field, 0.0)) + delta
+        self._slot_resistances = {}
+        self._applied_max = {}
+        self._recap()
+        self.current_item_text = None
         return {"slot": slot}
 
     def sanity_check(self) -> list[str]:
@@ -149,14 +172,24 @@ class FakeEngine:
     def _apply_resistances(self, item_text: str) -> None:
         """Меняет сопротивления на разницу между старым и новым предметом в слоте."""
         new = resistances_of(item_text)
-        for element, (capped_field, total_field) in _RESIST_FIELDS.items():
+        for element, (_capped_field, total_field) in _RESIST_FIELDS.items():
             delta = new.get(element, 0.0) - self._slot_resistances.get(element, 0.0)
             if not delta:
                 continue
-            total = float(self._current.get(total_field, 0.0)) + delta
-            self._current[total_field] = total
-            self._current[capped_field] = min(total, self.resist_cap)
+            self._current[total_field] = float(self._current.get(total_field, 0.0)) + delta
         self._slot_resistances = new
+        self._recap()
+
+    def _cap_of(self, element: str) -> float:
+        return self.resist_cap + self._applied_max.get(element, 0.0)
+
+    def _recap(self) -> None:
+        """Пересчитывает итоговые сопротивления по действующему максимуму."""
+        for element, (capped_field, total_field) in _RESIST_FIELDS.items():
+            if total_field not in self._current:
+                continue
+            total = float(self._current[total_field])
+            self._current[capped_field] = min(total, self._cap_of(element))
 
     def _recompute_derived(self) -> None:
         """Держит производные числа согласованными, как это делает PoB2."""

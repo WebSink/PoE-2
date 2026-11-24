@@ -141,7 +141,11 @@ def test_identity_item_produces_zero_change(real_context, identity_boots_text):
         assert delta.delta == pytest.approx(0.0), delta.stat
     for change in report.resistances:
         assert change.delta_capped == pytest.approx(0.0), change.element
-    assert report.rating.verdict == "sidegrade"
+    # в тексте нет строки Requires: возможность надеть не доказана, поэтому
+    # балл 0 не превращается даже в «примерно то же самое»
+    assert report.rating.score == pytest.approx(0.0)
+    assert report.rating.verdict == "inconclusive"
+    assert report.rating.provisional_verdict is None
 
 
 @requires_engine
@@ -280,6 +284,7 @@ def test_swap_that_lowers_attributes_blocks_the_rating(real_context):
 Cursed Boots
 Silk Slippers
 LevelReq: 36
+Requires: Level 36, 20 Dex
 -50 to Dexterity
 +20 to maximum Life
 """,

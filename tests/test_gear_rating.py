@@ -174,3 +174,35 @@ def test_without_blocking_requirements_a_positive_score_is_upgrade_again():
 
     assert rating.verdict == VERDICT_UPGRADE
     assert rating.provisional_verdict is None
+
+
+# --------------------------------------------------------------------------- #
+# Неизвестная экипируемость (review S5.1.2, пункт P1)
+# --------------------------------------------------------------------------- #
+
+
+def test_unknown_equippability_never_becomes_upgrade():
+    """Балл не превращает недоказанную возможность надеть в рекомендацию."""
+    rating = _evaluate(stat_deltas={"life": 500.0}, bases={"life": "engine"}, equippable=None)
+
+    assert rating.score > UPGRADE_THRESHOLD
+    assert rating.verdict == VERDICT_INCONCLUSIVE
+    assert rating.provisional_verdict is None
+    assert any("не проверена" in line or "не доказан" in line for line in rating.explanation)
+
+
+def test_unknown_equippability_does_not_become_downgrade_either():
+    rating = _evaluate(stat_deltas={"life": -500.0}, bases={"life": "engine"}, equippable=None)
+
+    assert rating.verdict == VERDICT_INCONCLUSIVE
+
+
+def test_unknown_equippability_wins_over_broken_requirements():
+    rating = _evaluate(
+        stat_deltas={"life": 500.0},
+        bases={"life": "engine"},
+        equippable=None,
+        blocking_requirements=["Ловкость: 70 меньше требуемых 90"],
+    )
+
+    assert rating.verdict == VERDICT_INCONCLUSIVE

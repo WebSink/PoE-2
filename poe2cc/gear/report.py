@@ -242,7 +242,7 @@ def render_text(report: AnalysisReport) -> str:
 
 
 def _cap_summary(report: AnalysisReport) -> str:
-    """Предел сопротивления по стихиям: до -> после, или «не измерен»."""
+    """Кап сопротивления по стихиям: до -> после, или «неизвестен»."""
     parts: list[str] = []
     for change in report.resistances:
         if change.cap_basis is None:
@@ -250,7 +250,14 @@ def _cap_summary(report: AnalysisReport) -> str:
             continue
         before = _plain(change.before_cap, "percent")
         after = _plain(change.after_cap, "percent")
-        if change.after_cap is not None and change.before_cap != change.after_cap:
+        if change.after_cap is None:
+            # старый кап не выдаётся за кап после замены
+            parts.append(f"{change.element} {before} -> неизвестен")
+            continue
+        if change.before_cap is None:
+            parts.append(f"{change.element} ? -> {after}")
+            continue
+        if change.before_cap != change.after_cap:
             parts.append(f"{change.element} {before} -> {after}")
         else:
             parts.append(f"{change.element} {before}")

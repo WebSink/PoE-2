@@ -319,9 +319,16 @@ def parse_item_text(text: str, slot: str | None = None) -> Item:
         if requires:
             if required_level is None:
                 required_level = float(requires.group("level"))
+            present: set[str] = set()
             for amount, attribute in _REQUIRES_ATTR.findall(requires.group("rest") or ""):
                 key = _ATTRIBUTE_REQUIREMENT_KEYS[attribute.lower()]
                 requirements[key] = float(amount)
+                present.add(key)
+            # строка Requires перечисляет все требования предмета: если атрибута
+            # в ней нет, требование нулевое, а не неизвестное
+            for key in requirements:
+                if key not in present:
+                    requirements[key] = 0.0
             continue
 
         if any(lowered.startswith(prefix) for prefix in _METADATA):

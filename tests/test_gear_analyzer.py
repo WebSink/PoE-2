@@ -17,6 +17,7 @@ from poe2cc.gear import (
     ENGINE_STATUS_ERROR,
     ENGINE_STATUS_OK,
     ENGINE_STATUS_UNAVAILABLE,
+    EngineCalculationError,
     GearAnalyzer,
     parse_item_json,
     parse_item_text,
@@ -440,6 +441,7 @@ def test_swap_that_removes_attributes_breaks_cascade(analyze, fake_engine):
 No Dex Boots
 Silk Slippers
 LevelReq: 36
+Requires: Level 36, 20 Dex
 +20 to maximum Life
 """
     report = analyze(text, engine=engine)
@@ -494,6 +496,7 @@ def test_big_gain_does_not_become_upgrade_when_cascade_breaks(analyze, fake_engi
 Big Life Boots
 Silk Slippers
 LevelReq: 36
+Requires: Level 36, 20 Dex
 +300 to maximum Life
 """
     report = analyze(text, engine=engine)
@@ -699,3 +702,228 @@ def test_temp_copy_removed_is_false_when_directory_survives(
         monkeypatch.undo()
         for path in leaked:
             real_rmtree(path, ignore_errors=True)
+
+
+# =========================================================================== #
+# Review S5.1.2: требования без снимаемого предмета и кап после замены
+# =========================================================================== #
+
+
+# --------------------------------------------------------------------------- #
+# P1. Требования проверяются по состоянию без старого предмета
+# --------------------------------------------------------------------------- #
+
+
+def test_requirements_use_state_without_the_removed_item(analyze, fake_engine):
+    """75 Dex без вещи; кандидат требует 80 и даёт +10% Dex; движок показывает 85.
+
+    Проверять требования по состоянию *после* надевания нельзя: собственный
+    бонус кандидата (+10% Dexterity — нераспознанный модификатор) маскирует
+    нехватку атрибута.
+    """
+    engine = fake_engine(
+        base_stats=_stats_with(Dex=85.0, ReqDex=65.0),
+        current_item_effects={"Dex": 10.0},
+        effects={"Dex Boots": {"Dex": 10.0}},
+    )
+    text = """Rarity: RARE
+Dex Boots
+Silk Slippers
+LevelReq: 36
+Requires: Level 36, 80 Dex
+10% increased Dexterity
++300 to maximum Life
+"""
+    report = analyze(text, engine=engine)
+
+    assert report.engine.status == ENGINE_STATUS_OK
+    # движок действительно показывает 85 после надевания
+    assert engine.get_stats(["Dex"])["Dex"] == pytest.approx(85.0)
+    dexterity = next(check for check in report.requirements.checks if check.kind == "dexterity")
+    assert dexterity.actual == pytest.approx(75.0)
+    assert dexterity.status == "not_satisfied"
+    assert report.requirements.equippable is False
+    assert report.rating.verdict == "not_equippable"
+    assert any("не проверяет требования" in item for item in report.limitations)
+
+
+def test_unrecoverable_requirements_never_become_upgrade(analyze, fake_engine):
+    """Требования не указаны — высокий балл не превращает это в «улучшение»."""
+    engine = fake_engine(effects={"Big Life Boots": {"Life": 300.0}})
+    text = """Rarity: RARE
+Big Life Boots
+Silk Slippers
+LevelReq: 36
++300 to maximum Life
+"""
+    report = analyze(text, engine=engine)
+
+    assert report.rating.score > 3.0
+    assert report.requirements.equippable is None
+    assert report.rating.verdict == "inconclusive"
+    assert report.rating.provisional_verdict is None
+
+
+def test_failed_unequip_leaves_requirements_unproven(analyze, fake_engine):
+    """Движок не смог снять предмет: состояние до замены неизвестно — не «улучшение»."""
+    engine = fake_engine(effects={"Big Life Boots": {"Life": 300.0}})
+
+    def refuse(slot):
+        raise EngineCalculationError("unequip_item: неизвестный слот Boots")
+
+    engine.unequip_item = refuse
+    text = """Rarity: RARE
+Big Life Boots
+Silk Slippers
+LevelReq: 36
+Requires: Level 36, 10 Dex
++300 to maximum Life
+"""
+    report = analyze(text, engine=engine)
+
+    # остальной расчёт замены всё равно выполнен движком
+    assert report.engine.status == ENGINE_STATUS_OK
+    assert report.requirements.equippable is None
+    assert report.rating.verdict == "inconclusive"
+    assert any("снять предмет в движке не удалось" in item for item in report.warnings)
+
+
+def test_unparsed_attribute_mod_on_removed_item_hides_requirements(tmp_path):
+    """Без движка неизвестный мод атрибута на снимаемой вещи не даёт проверять требования."""
+    xml = _fixture_build().read_text(encoding="utf-8")
+    patched = xml.replace(
+        "+60 to Stun Threshold\n",
+        "+60 to Stun Threshold\n10% increased Dexterity\n",
+        1,
+    )
+    assert patched != xml
+    build = tmp_path / "build.xml"
+    build.write_text(patched, encoding="utf-8")
+
+    candidate = parse_item_text(
+        """Rarity: RARE
+Big Life Boots
+Silk Slippers
+LevelReq: 36
+Requires: Level 36, 10 Dex
++300 to maximum Life
+""",
+        slot="Boots",
+    )
+    report = GearAnalyzer().analyze(
+        build_path=build,
+        candidate=candidate,
+        slot="Boots",
+        context=_context(),
+        use_engine=False,
+    )
+
+    assert report.requirements.equippable is None
+    assert report.rating.verdict == "inconclusive"
+    assert any("нераспознанные модификаторы атрибутов" in item for item in report.warnings)
+
+
+# --------------------------------------------------------------------------- #
+# P2. Кап после замены: измеренный, иначе базовый + объявленная разница
+# --------------------------------------------------------------------------- #
+
+
+def test_cap_grows_by_declared_maximum_without_saturation(analyze, fake_engine):
+    """before_cap 75, кандидат +2% к максимуму, движок отдаёт 76 без насыщения."""
+    engine = fake_engine(
+        base_stats=_stats_with(LightningResist=35.0, LightningResistTotal=35.0),
+        # кап движка выше, чтобы насыщения не было: он его полем не отдаёт
+        resist_cap=80.0,
+    )
+    text = """Rarity: RARE
+Max Light Boots
+Silk Slippers
+LevelReq: 36
+Requires: Level 36
++41% to Lightning Resistance
++2% to maximum Lightning Resistance
+"""
+    report = analyze(text, engine=engine)
+
+    lightning = next(change for change in report.resistances if change.element == "lightning")
+    assert lightning.before_cap == pytest.approx(75.0)
+    assert lightning.after_capped == pytest.approx(76.0)
+    assert lightning.after_cap == pytest.approx(77.0)
+    assert lightning.after_capped <= lightning.after_cap
+    assert lightning.cap_basis == "declared"
+    assert any("75% -> 77%" in note for note in lightning.notes)
+
+
+def test_cap_falls_when_removed_item_raised_the_maximum(analyze, fake_engine):
+    """Обратная замена: снимаемая вещь давала +2% максимума, кап возвращается к 75."""
+    engine = fake_engine(
+        base_stats=_stats_with(LightningResist=77.0, LightningResistTotal=90.0),
+        max_res_effects={"Victory League": {"lightning": 2.0}},
+    )
+    text = """Rarity: RARE
+Plain Boots
+Silk Slippers
+LevelReq: 36
+Requires: Level 36
++10 to maximum Life
+"""
+    report = analyze(text, engine=engine)
+
+    lightning = next(change for change in report.resistances if change.element == "lightning")
+    assert lightning.before_capped == pytest.approx(77.0)
+    assert lightning.before_cap == pytest.approx(77.0)
+    assert lightning.after_capped == pytest.approx(75.0)
+    assert lightning.after_cap == pytest.approx(75.0)
+    assert lightning.cap_basis == "engine"
+
+
+def test_value_above_own_cap_is_not_presented_as_known(analyze, fake_engine):
+    """Сопротивление выше расчётного капа не приписывается известному капу."""
+    engine = fake_engine(
+        base_stats=_stats_with(LightningResist=35.0, LightningResistTotal=35.0),
+        resist_cap=80.0,
+    )
+    text = """Rarity: RARE
+High Boots
+Silk Slippers
+LevelReq: 36
+Requires: Level 36
++41% to Lightning Resistance
+"""
+    report = analyze(text, engine=engine)
+
+    lightning = next(change for change in report.resistances if change.element == "lightning")
+    assert lightning.after_capped == pytest.approx(76.0)
+    assert lightning.after_cap is None
+    assert any("кап после замены неизвестен" in note for note in lightning.notes)
+    from poe2cc.gear import render_text
+
+    # старый кап не выдаётся за кап после замены
+    assert "lightning 75.0% -> неизвестен" in render_text(report)
+    assert "lightning_resistance" in report.rating.missing
+    assert report.rating.verdict == "inconclusive"
+
+
+def test_unknown_maximum_difference_keeps_cap_unknown(analyze, fake_engine):
+    """Нераспознанная строка про максимум не превращается в «разница ноль»."""
+    engine = fake_engine(
+        base_stats=_stats_with(LightningResist=35.0, LightningResistTotal=35.0),
+        effects={"Cond Boots": {"Life": 300.0}},
+    )
+    text = """Rarity: RARE
+Cond Boots
+Silk Slippers
+LevelReq: 36
+Requires: Level 36
++300 to maximum Life
++1% to maximum Lightning Resistance while on Low Life
+"""
+    report = analyze(text, engine=engine)
+
+    lightning = next(change for change in report.resistances if change.element == "lightning")
+    assert lightning.after_cap is None
+    assert lightning.cap_basis != "declared"
+    assert any("разницу определить нельзя" in note for note in lightning.notes)
+    # само сопротивление не менялось и далеко от капа: разница остаётся известной
+    assert lightning.delta_capped == pytest.approx(0.0)
+    assert "lightning_resistance" not in report.rating.missing

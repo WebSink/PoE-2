@@ -56,7 +56,8 @@ Armour: 300
     assert item.attribute_requirements == {
         "strength": 35.0,
         "dexterity": 20.0,
-        "intelligence": None,
+        # строка Requires перечисляет все требования: нет интеллекта — нет требования
+        "intelligence": 0.0,
     }
     assert item.defences == {"armour": 300.0}
 

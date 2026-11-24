@@ -9,6 +9,7 @@ from poe2cc.gear.requirements import (
     NOT_SATISFIED,
     SATISFIED,
     UNKNOWN,
+    attribute_evidence_incomplete,
     attributes_after_swap,
     attributes_without_slot_item,
     check_attribute_cascade,
@@ -238,3 +239,50 @@ def test_declared_mode_cascade_is_marked_as_approximation():
     )
 
     assert any("сложены из объявленных модификаторов" in note for note in report.notes)
+
+
+# --------------------------------------------------------------------------- #
+# Неизвестное состояние без предмета (review S5.1.2, пункт P1)
+# --------------------------------------------------------------------------- #
+
+
+def test_without_attributes_all_attribute_checks_are_unknown():
+    """Нет состояния без заменяемого предмета — требования атрибутов не доказаны."""
+    report = check_candidate(_boots(), 46, None)
+
+    assert report.equippable is None
+    assert {check.kind for check in report.unknown} == {
+        "strength",
+        "dexterity",
+        "intelligence",
+    }
+    assert all(check.status == UNKNOWN for check in report.unknown)
+    assert all(
+        "атрибуты без заменяемого предмета не получены" in check.detail for check in report.unknown
+    )
+    assert any("не проверены" in note for note in report.notes)
+
+
+def test_without_attributes_the_level_check_still_works():
+    unreadable = check_candidate(_boots(required_level=60), 46, None)
+    assert unreadable.equippable is not True
+    level = next(check for check in unreadable.checks if check.kind == "level")
+    assert level.status == NOT_SATISFIED
+
+
+def test_unknown_attribute_mod_on_removed_item_is_detected():
+    item = parse_item_text(
+        """Rarity: RARE
+Old Boots
+Silk Slippers
+LevelReq: 36
+10% increased Dexterity
+""",
+        slot="Boots",
+    )
+
+    assert attribute_evidence_incomplete(item) is True
+
+
+def test_complete_item_does_not_look_incomplete():
+    assert attribute_evidence_incomplete(_boots()) is False

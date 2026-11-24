@@ -120,6 +120,11 @@ def evaluate(
     `blocking_requirements` — причины, по которым замена ломает требования
     других предметов или камней. Даже при большом балле такой предмет не может
     получить вердикт «улучшение»: его нельзя носить вместе с остальной сборкой.
+
+    `equippable=None` значит, что возможность надеть **не доказана**: требования
+    не удалось проверить. В этом случае вердикт — `inconclusive` независимо от
+    балла, потому что балл не может быть рекомендацией купить вещь, которую,
+    возможно, нельзя носить.
     """
     components: list[RatingComponent] = []
     resistance_keys = set(stats.RESISTANCES)
@@ -192,9 +197,13 @@ def evaluate(
     score = sum(component.contribution for component in components)
     partial = bool(missing)
     blocked = bool(blocking_requirements)
+    equippability_unknown = equippable is None
 
     if equippable is False:
         verdict = VERDICT_NOT_EQUIPPABLE
+    elif equippability_unknown:
+        # балл не заменяет доказательство: надеть вещь может быть нельзя
+        verdict = VERDICT_INCONCLUSIVE
     elif blocked:
         verdict = VERDICT_REQUIREMENTS_BROKEN
     elif partial:
@@ -215,10 +224,15 @@ def evaluate(
     explanation.append(
         f"итог: {score:.2f} при порогах ±{UPGRADE_THRESHOLD:g} -> {VERDICT_LABELS[verdict]}"
     )
-    if blocked and equippable is not False:
+    if blocked and equippable is True:
         explanation.append(
             "балл не превращается в «улучшение»: замена нарушает требования других "
             "предметов или камней — " + "; ".join(blocking_requirements or [])
+        )
+    if equippability_unknown:
+        explanation.append(
+            "балл не превращается в рекомендацию: возможность надеть предмет не доказана — "
+            "требования не удалось проверить, поэтому вердикт «недостаточно данных»"
         )
     if partial:
         explanation.append(
@@ -230,7 +244,7 @@ def evaluate(
         score=score,
         verdict=verdict,
         provisional_verdict=(
-            _verdict(score) if partial and equippable is not False and not blocked else None
+            _verdict(score) if partial and equippable is True and not blocked else None
         ),
         partial=partial,
         components=components,

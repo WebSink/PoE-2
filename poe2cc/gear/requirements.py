@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from .items import Item
@@ -29,6 +30,9 @@ _ATTRIBUTE_LABELS = {
 }
 
 ATTRIBUTES = ("strength", "dexterity", "intelligence")
+
+#: Нераспознанный модификатор, который может менять атрибуты (проценты, условия).
+_ATTRIBUTE_MOD_RE = re.compile(r"strength|dexterity|intelligence|attributes", re.IGNORECASE)
 
 
 @dataclass
@@ -122,14 +126,15 @@ def _compare(kind: str, label: str, required: float | None, actual: float | None
 
 
 def check_candidate(
-    item: Item, character_level: float, attributes: dict[str, float]
+    item: Item, character_level: float, attributes: dict[str, float] | None
 ) -> RequirementReport:
     """Проверяет требования самого кандидата.
 
     `attributes` — атрибуты персонажа *без* заменяемого предмета и без
     собственных бонусов кандидата: предмет не может удовлетворять свои же
     требования, а снимаемая вещь перестаёт действовать (см.
-    `attributes_without_slot_item`).
+    `attributes_without_slot_item`). `None` — достоверно получить это состояние
+    не удалось: тогда проверка атрибутов остаётся `UNKNOWN`, а не «выполнено».
     """
     report = RequirementReport()
     report.checks.append(
@@ -141,9 +146,16 @@ def check_candidate(
                 kind,
                 _ATTRIBUTE_LABELS[kind],
                 item.attribute_requirements.get(kind),
-                attributes.get(kind),
-                "Requires ... Str/Dex/Int",
+                None if attributes is None else attributes.get(kind),
+                "Requires ... Str/Dex/Int"
+                if attributes is not None
+                else "атрибуты без заменяемого предмета не получены",
             )
+        )
+    if attributes is None:
+        report.notes.append(
+            "атрибуты без заменяемого предмета неизвестны: требования атрибутов кандидата "
+            "не проверены, вердикт не может быть «улучшение»"
         )
     if all(item.attribute_requirements.get(kind) is None for kind in _ATTRIBUTE_LABELS):
         report.notes.append(
@@ -154,6 +166,19 @@ def check_candidate(
         "собственные бонусы кандидата не учитываются в его же требованиях — как в игре"
     )
     return report
+
+
+def attribute_evidence_incomplete(item: Item | None) -> bool:
+    """Есть ли на предмете источник атрибутов, который не сводится к плоскому бонусу.
+
+    `attributes_without_slot_item` вычитает только распознанные плоские
+    `+N to Strength/Dexterity/Intelligence`. Проценты, условия и нераспознанные
+    строки так не отнять: если они упоминают атрибуты, доступное значение может
+    быть завышено, и проверять по нему требования нельзя.
+    """
+    if item is None:
+        return False
+    return any(_ATTRIBUTE_MOD_RE.search(mod.text) for mod in item.unknown_mods)
 
 
 def attributes_without_slot_item(
